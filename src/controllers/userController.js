@@ -10,4 +10,14 @@ async function getAllUsers(req, res) {
   }
 }
 
-module.exports = { getAllUsers };
+async function addUser(req, res) {
+  const { name, age } = req.body;
+  try {
+    const [result] = await db.query('INSERT INTO users (name, age) VALUES (?, ?)', [name, age]);
+    res.status(201).json({ id: result.insertId, name, age });
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+}
+
+module.exports = { getAllUsers, addUser };

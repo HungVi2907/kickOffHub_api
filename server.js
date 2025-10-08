@@ -15,11 +15,6 @@ const PORT = process.env.PORT;;
 app.use(cors({ origin: 'http://localhost:5173' })); 
 app.use(express.json()); 
 
-// ROUTE BỊ LỖI (Bây giờ đã được sửa)
-// dataRoutes đã là một Router instance hợp lệ từ Bước 1
-app.use('/v1', dataRoutes); 
-
-// ... (các phần còn lại)
 
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
