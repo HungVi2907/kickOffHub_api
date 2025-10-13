@@ -1,10 +1,11 @@
 const axios = require('axios');
 
-async function getPlayerProfile(playerId) {
+async function getLeagues() {
   try {
+    console.log('API Key:', process.env.API_FOOTBALL_KEY); // Debug line
     const response = await axios({
       method: 'get',
-      url: `https://v3.football.api-sports.io/players/profiles?player=${276}`,
+      url: `https://v3.football.api-sports.io/leagues?country=england`,
       headers: {
         'x-rapidapi-key': process.env.API_FOOTBALL_KEY,
         'x-rapidapi-host': 'v3.football.api-sports.io'
@@ -15,5 +16,4 @@ async function getPlayerProfile(playerId) {
     throw error;
   }
 }
-
-module.exports = { getPlayerProfile };
+module.exports = { getLeagues };
