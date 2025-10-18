@@ -1,0 +1,15 @@
+module.exports = {
+  countriesController: require('./countries.controller'),
+  leaguesController: require('./leagues.controller'),
+  seasonsController: require('./seasons.controller'),
+  venuesController: require('./venues.controller'),
+  teamsController: require('./teams.controller'),
+  playersController: require('./players.controller'),
+  playerHistoryController: require('./player-history.controller'),
+  playerTrophiesController: require('./player-trophies.controller'),
+  playerInjuriesController: require('./player-injuries.controller'),
+  transfersController: require('./transfers.controller'),
+  fixturesController: require('./fixtures.controller'),
+  playerMatchStatsController: require('./player-match-stats.controller'),
+  playerSeasonStatsController: require('./player-season-stats.controller'),
+};

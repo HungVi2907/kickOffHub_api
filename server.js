@@ -24,12 +24,9 @@ app.get('/', (req, res) => {
 });
 
 
-//lấy dữ liệu từ API-Football
-const countryRoutes = require('./src/routes/v1/country.routes');
-app.use('/api/v1/countries', countryRoutes);
-
-const leagueRoutes = require('./src/routes/v1/league.routes');
-app.use('/api/v1/leagues', leagueRoutes);
+// API-Football endpoints grouped under /api/v1
+const v1Routes = require('./src/routes/v1');
+app.use('/api/v1', v1Routes);
 
 const testRoutes = require('./src/routes/v1/test.routes');
 app.use('/api/v1/test', testRoutes);
