@@ -30,3 +30,6 @@ app.use('/api/v1/countries', countryRoutes);
 
 const leagueRoutes = require('./src/routes/v1/league.routes');
 app.use('/api/v1/leagues', leagueRoutes);
+
+const testRoutes = require('./src/routes/v1/test.routes');
+app.use('/api/v1/test', testRoutes);

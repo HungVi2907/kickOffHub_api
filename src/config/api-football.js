@@ -1,11 +1,11 @@
 const axios = require('axios');
 
-async function getLeagues() {
+async function getCountries_test() {
   try {
     console.log('API Key:', process.env.API_FOOTBALL_KEY); // Debug line
     const response = await axios({
       method: 'get',
-      url: `https://v3.football.api-sports.io/leagues?country=england`,
+      url: `https://v3.football.api-sports.io/countries`,
       headers: {
         'x-rapidapi-key': process.env.API_FOOTBALL_KEY,
         'x-rapidapi-host': 'v3.football.api-sports.io'
@@ -16,4 +16,4 @@ async function getLeagues() {
     throw error;
   }
 }
-module.exports = { getLeagues };
+module.exports = { getCountries_test };
