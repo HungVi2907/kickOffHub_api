@@ -92,6 +92,8 @@ const deleteTeam = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   listTeams,
   getTeamById,

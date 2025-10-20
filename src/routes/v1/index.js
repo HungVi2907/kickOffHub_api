@@ -14,5 +14,7 @@ router.use('/transfers', require('./transfers.routes'));
 router.use('/fixtures', require('./fixtures.routes'));
 router.use('/player-match-stats', require('./player-match-stats.routes'));
 router.use('/player-season-stats', require('./player-season-stats.routes'));
+router.use('/coaches', require('./coaches.routes'));
+router.use('/coach-team-history', require('./coach-team-history.routes'));
 
 module.exports = router;

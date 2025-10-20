@@ -1,10 +1,12 @@
 module.exports = {
   countriesController: require('./countries.controller'),
+  coachesController: require('./coaches.controller'),
   leaguesController: require('./leagues.controller'),
   seasonsController: require('./seasons.controller'),
   venuesController: require('./venues.controller'),
   teamsController: require('./teams.controller'),
   playersController: require('./players.controller'),
+  coachTeamHistoryController: require('./coach-team-history.controller'),
   playerHistoryController: require('./player-history.controller'),
   playerTrophiesController: require('./player-trophies.controller'),
   playerInjuriesController: require('./player-injuries.controller'),

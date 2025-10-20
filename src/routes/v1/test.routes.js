@@ -1,14 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { getCountries_test } = require('../../config/api-football');
+const { getLeagues_test, getCoaches_test } = require('../../config/api-football');
 
-router.get('/countries', async (req, res) => {
+router.get('/leagues', async (req, res) => {
   try {
-    const data = await getCountries_test();
+    const data = await getLeagues_test();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+router.get('/coaches', async (req, res) => {
+  try {
+    const data = await getCoaches_test();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 module.exports = router;

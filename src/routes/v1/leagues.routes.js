@@ -3,6 +3,7 @@ const router = express.Router();
 const { leaguesController, seasonsController } = require('../../controllers');
 
 router.get('/', leaguesController.listLeagues);
+router.post('/sync/api-football', leaguesController.syncLeaguesFromApi);
 router.get('/:leagueId', leaguesController.getLeagueById);
 router.post('/', leaguesController.createLeague);
 router.put('/:leagueId', leaguesController.updateLeague);
