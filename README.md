@@ -5,152 +5,112 @@
 ## Cấu trúc dự án
 
 ```
-Back_End/
-├── .env
-├── node_modules/
-├── package-lock.json
-├── package.json
-├── README.md
-├── server.js
-├── create_table.sql
-└── src/
-    ├── app.js
-    ├── config/
-    │   ├── database.js  # Sequelize config
-    │   └── db.js        # Legacy MySQL2 (deprecated)
-    ├── controllers/
-    │   ├── countriesController.js
-    │   ├── leaguesController.js
-    │   ├── teamsController.js
-    │   ├── userController.js
-    │   └── venuesController.js
-    ├── middlewares/
-    ├── models/
-    │   ├── Country.js     # Sequelize model
-    │   ├── League.js      # Sequelize model
-    │   ├── Team.js        # Sequelize model
-    │   ├── Venue.js       # Sequelize model
-    │   ├── countryModel.js  # Legacy MySQL2 (deprecated)
-    │   ├── leagueModel.js   # Legacy MySQL2 (deprecated)
-    │   ├── teamModel.js     # Legacy MySQL2 (deprecated)
-    │   ├── userModel.js     # Legacy MySQL2 (deprecated)
-    │   └── venueModel.js    # Legacy MySQL2 (deprecated)
-    ├── routes/
-    │   ├── countries.js
-    │   ├── leagues.js
-    │   ├── teams.js
-    │   ├── test.js
-    │   ├── userRoutes.js
-    │   └── venues.js
-    └── utils/
-        └── fetchApiFootball.js
-```
-        └── userRoutes.js
+# Kick Off Hub Back-End API
+
+Ngắn gọn: RESTful API cho quản lý Users, Countries, Leagues, Venues, Teams — xây dựng bằng Node.js, Express và Sequelize (MySQL).
+
+Phiên bản repo: branch `main` (CommonJS và ES modules tồn tại trong repo; kiểm tra file entry khi khởi động).
+
+## Nội dung chính
+
+- Node.js, Express
+- Sequelize ORM (MySQL)
+- Một số helpers để đồng bộ dữ liệu từ API-Football (api-sports)
+
+## Cấu trúc dự án (tóm tắt)
+
+src/
+- config/         # database config (Sequelize + legacy MySQL2)
+- controllers/    # business logic (countries, leagues, teams, venues ...)
+- models/         # Sequelize models (Team, Venue, Country...)
+- routes/         # Express routers
+- utils/          # helpers, fetchApiFootball
+
+## Cài đặt nhanh (Windows / PowerShell)
+
+1. Cài Node.js và MySQL
+2. Tạo file `.env` dựa trên `.env.example` (nếu có). Ví dụ tối thiểu:
+
+```powershell
+$env:DB_HOST="localhost"
+$env:DB_USER="root"
+$env:DB_PASSWORD="your_password"
+$env:DB_NAME="kickoff_hub"
+$env:DB_PORT="3306"
+$env:API_FOOTBALL_KEY="your_api_key_here"
 ```
 
-## Cài đặt
+3. Cài dependencies:
 
-1. Đảm bảo bạn đã cài đặt Node.js và MySQL.
+```powershell
+npm install
+```
 
-2. Sao chép file `.env` và cập nhật thông tin kết nối MySQL của bạn:
+4. Chạy server (dev):
 
-   ```
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=your_password
-   DB_NAME=kickoff_hub
-   DB_PORT=3306
-   ```
+```powershell
+npm run dev
+```
 
-3. Chạy file `create_table.sql` để tạo database và bảng trong MySQL:
+Server mặc định lắng nghe `http://localhost:3000` (kiểm tra `server.js` để xác nhận PORT).
 
-   Mở MySQL command line hoặc công cụ quản lý MySQL (như phpMyAdmin, MySQL Workbench), và chạy các lệnh trong file `create_table.sql`. File này sẽ:
-   - Tạo database `kickoff_hub` (nếu chưa có)
-   - Tạo bảng `users` với các trường phù hợp
-   - Thêm một số dữ liệu mẫu để test
+## Các biến môi trường quan trọng
 
-4. Cài đặt dependencies:
+- DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT — cho kết nối MySQL/Sequelize
+- API_FOOTBALL_KEY — API key cho api-sports (đặt trong `.env`)
 
-   ```
-   npm install
-   ```
+Lưu ý: KHÔNG commit `.env` hoặc keys lên GitHub. Nếu lỡ push, hãy rotate (thay) keys ngay.
 
-   **Lưu ý:** Dự án sử dụng Sequelize ORM để tương tác với MySQL. Database sẽ được tự động sync khi server khởi động.
+## Các endpoint chính (tập trung vào Teams)
 
-## Chạy ứng dụng
+Teams
+- GET /api/teams — lấy tất cả teams
+- GET /api/teams/:id — thông tin team theo id
+- GET /api/teams/league/:leagueID?season=2023 — fetch teams từ API theo league (passthrough)
+- POST /api/teams — tạo team
+- PUT /api/teams/:id — cập nhật
+- DELETE /api/teams/:id — xóa
+- POST /api/teams/import — import teams từ league (body: { leagueId, season })
+- GET /api/teams/:name/search?limit=20 — tìm kiếm theo tên (kí tự, trả về tối đa limit)
+- GET /api/teams/:teamId/stats?season=2023&league=39 — lấy thống kê từ API-Football (teamId trong path)
 
-- Chạy ở chế độ production: `npm start`
-- Chạy ở chế độ development (với nodemon): `npm run dev`
+Đặc biệt: route `GET /api/teams/:teamId/stats` đã thiết kế để tránh xung đột với `/:id` generic bằng cách đặt `stats` ở vị trí sau `:teamId`.
 
-Server sẽ chạy trên `http://localhost:3000`.
+## Ví dụ gọi stats
 
-## API Endpoints
+```powershell
+# Lấy thống kê cho team 33 mùa 2023
+Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/teams/33/stats?season=2023&league=39" -Headers @{ "x-apisports-key" = "your_api_key_here" }
+```
 
-### Users
-
-- `GET /api/users` - Lấy danh sách tất cả users
-- `GET /api/users/:id` - Lấy thông tin một user theo ID
-- `POST /api/users` - Thêm user mới (body: { "name": "string", "email": "string" })
-- `PUT /api/users/:id` - Cập nhật user theo ID (body: { "name": "string", "email": "string" })
-- `DELETE /api/users/:id` - Xóa user theo ID
-
-### Countries
-
-- `GET /api/countries` - Lấy danh sách tất cả countries
-- `GET /api/countries/:id` - Lấy thông tin một country theo ID
-- `POST /api/countries` - Thêm country mới (body: { "name": "string", "code": "string", "flag": "string" })
-- `PUT /api/countries/:id` - Cập nhật country theo ID
-- `DELETE /api/countries/:id` - Xóa country theo ID
-- `POST /api/countries/import` - Import countries từ API-Football
-
-### Leagues
-
-- `GET /api/leagues` - Lấy danh sách tất cả leagues
-- `GET /api/leagues/:id` - Lấy thông tin một league theo ID
-- `POST /api/leagues` - Thêm league mới (body: { "name": "string", "country": "string", "season": number })
-- `PUT /api/leagues/:id` - Cập nhật league theo ID
-- `DELETE /api/leagues/:id` - Xóa league theo ID
-- `POST /api/leagues/import-teams` - Import teams và venues từ API-Football (body: { "leagueId": number, "season": number })
-
-### Venues
-
-- `GET /api/venues` - Lấy danh sách tất cả venues
-- `GET /api/venues/:id` - Lấy thông tin một venue theo ID
-- `POST /api/venues` - Thêm venue mới
-- `PUT /api/venues/:id` - Cập nhật venue theo ID
-- `DELETE /api/venues/:id` - Xóa venue theo ID
-- `POST /api/venues/import` - Import venues từ API-Football (league=39, season=2023)
-
-### Teams
-
-- `GET /api/teams` - Lấy danh sách tất cả teams
-- `GET /api/teams/:id` - Lấy thông tin một team theo ID
-- `POST /api/teams` - Thêm team mới
-- `PUT /api/teams/:id` - Cập nhật team theo ID
-- `DELETE /api/teams/:id` - Xóa team theo ID
-- `GET /api/teams/fetch?league=39&season=2023` - Fetch teams từ API-Football và lưu vào DB
-
-## Ví dụ sử dụng
-
-### Thêm user mới:
+Hoặc dùng curl:
 
 ```bash
-curl -X POST http://localhost:3000/api/users \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John Doe", "email": "john@example.com"}'
+curl "http://localhost:3000/api/teams/33/stats?season=2023&league=39"
 ```
 
-### Lấy danh sách users:
+## Git / bảo mật — nếu lỡ push secrets
 
-```bash
-curl http://localhost:3000/api/users
+1. Thêm `.gitignore` (đã có sẵn trong repo) để exclude `node_modules/`, `.env`, v.v.
+2. Xóa các file nhạy cảm khỏi repo history (nếu cần):
+
+```powershell
+git rm --cached .env
+git commit -m "Remove env from tracking"
+git push origin main
 ```
 
-## Cập nhật gần đây
+3. Nếu `.env` hoặc key đã được push trong commit trước đó, bạn cần: rotate các API keys/credentials và (tuỳ chọn) rewrite history (ví dụ `git filter-branch` hoặc `git filter-repo`) — LƯU Ý: rewrite history cần thận trọng khi repo có nhiều cộng tác viên.
 
-✅ **Hoàn thành migration sang Sequelize ORM (2024)**
-- Tất cả controllers đã được chuyển đổi từ MySQL2 sang Sequelize
-- Các models Sequelize: `Country.js`, `League.js`, `Venue.js`, `Team.js`, `User.js`
-- Database sẽ tự động sync khi server khởi động
-- Cải thiện tính nhất quán và bảo trì code
-- **Migration hoàn tất**: Không còn sử dụng MySQL2 models trong controllers
+## Troubleshooting nhanh
+
+- Nếu endpoint trả về `team` NaN, kiểm tra bạn đang gọi endpoint với `teamId` trong path (`/api/teams/:teamId/stats`) chứ không phải `?teamId=` query.
+- Kiểm tra `process.env.API_FOOTBALL_KEY` đã set chưa
+- Kiểm tra logs khi server khởi động: `npm run dev` và xem lỗi syntax nếu có
+
+## Ghi chú kỹ thuật & next steps
+
+- Có một số phần legacy dùng MySQL2 (db.js) và một số đã được migrate sang Sequelize — nên dọn dẹp dần để tránh nhầm lẫn.
+- Có các controller sync (venues, teams, leagues) sử dụng batch processing để tránh rate limit API — bạn có thể tùy chỉnh batch size và delay qua query/body params.
+
+---
