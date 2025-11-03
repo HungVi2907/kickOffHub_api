@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import Team from '../models/Team.js';
 import { getTeamsByLeague as fetchTeamsByLeague } from '../utils/fetchApiFootball.js';
 
@@ -75,6 +76,40 @@ const TeamsController = {
 		}
 	},
 
+	async searchTeamsByName(req, res) {
+		try {
+			const rawName = req.params.name;
+			const keyword = typeof rawName === 'string' ? rawName.trim() : '';
+
+			if (!keyword) {
+				return res.status(400).json({ error: 'Tên đội bóng không hợp lệ' });
+			}
+
+			const rawLimit = Number(req.query.limit);
+			const limit = Number.isFinite(rawLimit) && rawLimit > 0 && rawLimit <= 100 ? rawLimit : 20;
+
+			const escapedKeyword = keyword.replace(/[%_]/g, '\\$&');
+			const teams = await Team.findAll({
+				where: {
+					name: {
+						[Op.like]: `%${escapedKeyword}%`
+					}
+				},
+				order: [['name', 'ASC']],
+				limit
+			});
+
+			res.json({
+				results: teams,
+				total: teams.length,
+				limit,
+				keyword
+			});
+		} catch (error) {
+			res.status(500).json({ error: 'Lỗi khi tìm kiếm team', details: error.message });
+		}
+	},
+
 	async importTeamsFromLeague(req, res) {
 		try {
 			const leagueId = Number(req.body.leagueId) || 39;
@@ -113,6 +148,60 @@ const TeamsController = {
 		} catch (error) {
 			console.error('Lỗi khi import teams:', error);
 			res.status(500).json({ error: 'Lỗi khi import dữ liệu teams' });
+		}
+	},
+	async getStatsByTeamIdAndSeason(req, res) {
+		try {
+			const teamIdParam = req.params.teamId ?? req.params.id ?? req.query.teamId;
+			const teamId = Number(teamIdParam);
+			if (!Number.isFinite(teamId) || teamId <= 0) {
+				return res.status(400).json({ error: 'teamId không hợp lệ' });
+			}
+
+			const rawLeague = req.query.league;
+			const league = rawLeague ? Number(rawLeague) : 39;
+			if (!Number.isFinite(league) || league <= 0) {
+				return res.status(400).json({ error: 'league không hợp lệ' });
+			}
+
+			const rawSeason = req.query.season;
+			let season = 2023;
+			if (rawSeason) {
+				const parsedSeason = Number(rawSeason);
+				if (!Number.isFinite(parsedSeason)) {
+					return res.status(400).json({ error: 'season không hợp lệ' });
+				}
+				season = parsedSeason;
+			}
+
+			const queryParams = new URLSearchParams({ league: String(league), team: String(teamId), season: String(season) });
+			const response = await fetch(`https://v3.football.api-sports.io/teams/statistics?${queryParams.toString()}`, {
+				headers: {
+					"x-apisports-key": process.env.API_FOOTBALL_KEY,
+					"x-rapidapi-host": "v3.football.api-sports.io"
+				}
+			});
+
+			if (!response.ok) {
+				const errorPayload = await response.json().catch(() => ({}));
+				return res.status(response.status).json({
+					error: 'Không thể lấy thống kê đội bóng từ API-Football',
+					status: response.status,
+					details: errorPayload
+				});
+			}
+
+			const data = await response.json();
+			res.json({
+				league,
+				season,
+				teamId,
+				source: 'API-Football',
+				payload: data
+			});
+		} catch (error) {
+			console.error('Lỗi khi lấy thống kê đội bóng:', error);
+			res.status(500).json({ error: 'Lỗi khi lấy thống kê đội bóng' });
 		}
 	}
 };
