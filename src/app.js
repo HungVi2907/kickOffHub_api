@@ -18,6 +18,7 @@ app.use('/api', countriesRoutes);
 app.use('/api/leagues', leaguesRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/venues', venuesRoutes);
+
 // Route mặc định
 app.get('/', (req, res) => {
   res.send('Chào mừng đến với Kick Off Hub API');
