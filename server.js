@@ -1,32 +1,15 @@
-// server.js 
+import 'dotenv/config';
+import sequelize from './src/config/database.js';
+import app from './src/app.js';
 
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors'); // Đảm bảo đã cài npm install cors
+const PORT = process.env.PORT || 3000;
 
-// QUAN TRỌNG: Dùng require() để import Router
-
-dotenv.config();
-const app = express();
-const PORT = process.env.PORT;
-  
-// Middleware
-app.use(cors({ origin: 'http://localhost:5173' })); 
-app.use(express.json()); 
-
-
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Sync database và khởi động server
+sequelize.sync().then(() => {
+  console.log('Database synced successfully.');
+  app.listen(PORT, () => {
+    console.log(`Server đang chạy trên port ${PORT}`);
+  });
+}).catch((error) => {
+  console.error('Unable to sync database:', error);
 });
-
-app.get('/', (req, res) => {
-  res.send('KickOff Hub API is running!');
-});
-
-
-// API-Football endpoints grouped under /api/v1
-const v1Routes = require('./src/routes/v1');
-app.use('/api/v1', v1Routes);
-
-const testRoutes = require('./src/routes/v1/test.routes');
-app.use('/api/v1/test', testRoutes);
