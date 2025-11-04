@@ -27,7 +27,11 @@ const swaggerDefinition = {
     {
       url: 'http://localhost:3000',
       description: 'Local server'
-    }
+    },
+    {
+      url: 'https://kickoffhub-api.onrender.com',
+      description: 'Render deployment',
+    },
   ],
 };
 
