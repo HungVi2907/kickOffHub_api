@@ -2,7 +2,7 @@ import express from 'express';
 import teamsController from '../controllers/teamsController.js';
 
 const router = express.Router();
-// Định tuyến cho Teams
+// Routes for Teams
 
 /**
  * @openapi
@@ -14,50 +14,97 @@ const router = express.Router();
  *         id:
  *           type: integer
  *           format: int32
+ *           description: Unique identifier for the team
  *         name:
  *           type: string
+ *           description: The name of the team
  *         leagues_id:
  *           type: integer
+ *           description: The ID of the league this team belongs to
  *         code:
  *           type: string
+ *           description: Short code representing the team
  *         country:
  *           type: string
+ *           description: The country where the team is based
  *         founded:
  *           type: integer
+ *           description: The year the team was founded
  *         national:
  *           type: boolean
+ *           description: Indicates if this is a national team
  *         logo:
  *           type: string
+ *           description: URL to the team's logo image
  *         venue_id:
  *           type: integer
+ *           description: The ID of the team's home venue
  *         created_at:
  *           type: string
  *           format: date-time
+ *           description: Timestamp when the team record was created
  *         updated_at:
  *           type: string
  *           format: date-time
+ *           description: Timestamp when the team record was last updated
  *       required:
  *         - name
+ *       example:
+ *         id: 1
+ *         name: "Manchester United"
+ *         leagues_id: 39
+ *         code: "MUN"
+ *         country: "England"
+ *         founded: 1878
+ *         national: false
+ *         logo: "https://example.com/logo.png"
+ *         venue_id: 556
+ *         created_at: "2023-01-01T00:00:00Z"
+ *         updated_at: "2023-01-01T00:00:00Z"
  */
 
 /**
  * @openapi
  * /api/teams:
  *   get:
- *     summary: Lấy danh sách tất cả teams
+ *     summary: Retrieve a list of all teams
+ *     description: This endpoint returns a list of all teams in the system. Useful for displaying available teams or for administrative purposes.
  *     tags:
  *       - Teams
  *     responses:
  *       200:
- *         description: Danh sách teams
+ *         description: A list of teams
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Team'
+ *             example:
+ *               - id: 1
+ *                 name: "Manchester United"
+ *                 leagues_id: 39
+ *                 code: "MUN"
+ *                 country: "England"
+ *                 founded: 1878
+ *                 national: false
+ *                 logo: "https://example.com/logo.png"
+ *                 venue_id: 556
+ *                 created_at: "2023-01-01T00:00:00Z"
+ *                 updated_at: "2023-01-01T00:00:00Z"
+ *               - id: 2
+ *                 name: "Real Madrid"
+ *                 leagues_id: 140
+ *                 code: "RMA"
+ *                 country: "Spain"
+ *                 founded: 1902
+ *                 national: false
+ *                 logo: "https://example.com/logo2.png"
+ *                 venue_id: 1456
+ *                 created_at: "2023-01-01T00:00:00Z"
+ *                 updated_at: "2023-01-01T00:00:00Z"
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while retrieving teams
  */
 router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
 
@@ -65,7 +112,8 @@ router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
  * @openapi
  * /api/teams/league/{leagueID}:
  *   get:
- *     summary: Lấy teams theo league ID
+ *     summary: Retrieve teams by league ID
+ *     description: This endpoint fetches all teams that belong to a specific league. Provide the league ID in the URL path.
  *     tags:
  *       - Teams
  *     parameters:
@@ -74,26 +122,44 @@ router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của league
+ *         description: The unique identifier of the league
+ *         example: 39
  *     responses:
  *       200:
- *         description: Danh sách teams thuộc league
+ *         description: A list of teams in the specified league
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Team'
+ *             example:
+ *               - id: 1
+ *                 name: "Manchester United"
+ *                 leagues_id: 39
+ *                 code: "MUN"
+ *                 country: "England"
+ *                 founded: 1878
+ *                 national: false
+ *                 logo: "https://example.com/logo.png"
+ *                 venue_id: 556
+ *                 created_at: "2023-01-01T00:00:00Z"
+ *                 updated_at: "2023-01-01T00:00:00Z"
+ *       400:
+ *         description: Invalid league ID provided
+ *       404:
+ *         description: League not found
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while retrieving teams
  */
-router.get('/league/:leagueID', teamsController.getTeamsByLeague); // GET /api/teams/league/:leagueID
+router.get('/teams/league/:leagueID', teamsController.getTeamsByLeague); // GET /api/teams/league/:leagueID
 
 /**
  * @openapi
  * /api/teams/{teamId}/stats:
  *   get:
- *     summary: Lấy thống kê của team theo teamId và season (params, query tùy controller)
+ *     summary: Retrieve statistics for a specific team
+ *     description: This endpoint provides statistical data for a team, optionally filtered by season. The team ID is required in the URL path, and season can be specified as a query parameter.
  *     tags:
  *       - Teams
  *     parameters:
@@ -102,24 +168,45 @@ router.get('/league/:leagueID', teamsController.getTeamsByLeague); // GET /api/t
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của team
+ *         description: The unique identifier of the team
+ *         example: 1
+ *       - in: query
+ *         name: season
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: The season year for which to retrieve statistics (e.g., "2023")
+ *         example: "2023"
  *     responses:
  *       200:
- *         description: Thống kê của team
+ *         description: Statistics for the team
  *         content:
  *           application/json:
  *             schema:
  *               type: object
+ *             example:
+ *               team_id: 1
+ *               season: "2023"
+ *               wins: 20
+ *               draws: 10
+ *               losses: 8
+ *               goals_for: 65
+ *               goals_against: 35
+ *       400:
+ *         description: Invalid team ID or season parameter
+ *       404:
+ *         description: Team not found
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while retrieving statistics
  */
-router.get('/:teamId/stats', teamsController.getStatsByTeamIdAndSeason); // GET /api/teams/:teamId/stats
+router.get('/teams/:teamId/stats', teamsController.getStatsByTeamIdAndSeason); // GET /api/teams/:teamId/stats
 
 /**
  * @openapi
  * /api/teams/{name}/search:
  *   get:
- *     summary: Tìm teams theo tên
+ *     summary: Search teams by name
+ *     description: This endpoint searches for teams whose names match or contain the provided search term. The search is case-insensitive and supports partial matches.
  *     tags:
  *       - Teams
  *     parameters:
@@ -128,30 +215,46 @@ router.get('/:teamId/stats', teamsController.getStatsByTeamIdAndSeason); // GET 
  *         required: true
  *         schema:
  *           type: string
- *         description: Tên team hoặc phần tên để tìm
+ *         description: The name or partial name of the team to search for
+ *         example: "Manchester"
  *     responses:
  *       200:
- *         description: Danh sách teams phù hợp
+ *         description: A list of teams matching the search criteria
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Team'
+ *             example:
+ *               - id: 1
+ *                 name: "Manchester United"
+ *                 leagues_id: 39
+ *                 code: "MUN"
+ *                 country: "England"
+ *                 founded: 1878
+ *                 national: false
+ *                 logo: "https://example.com/logo.png"
+ *                 venue_id: 556
+ *                 created_at: "2023-01-01T00:00:00Z"
+ *                 updated_at: "2023-01-01T00:00:00Z"
+ *       400:
+ *         description: Invalid search term provided
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred during search
  */
-router.get('/:name/search', teamsController.searchTeamsByName); // GET /api/teams/:name/search
+router.get('/teams/:name/search', teamsController.searchTeamsByName); // GET /api/teams/:name/search
 
 /**
  * @openapi
  * /api/teams:
  *   post:
- *     summary: Tạo mới một team
+ *     summary: Create a new team
+ *     description: This endpoint allows you to create a new team by providing the required information in the request body. The team name is mandatory.
  *     tags:
  *       - Teams
  *     requestBody:
- *       description: Dữ liệu team cần tạo
+ *       description: The data for the new team
  *       required: true
  *       content:
  *         application/json:
@@ -160,39 +263,71 @@ router.get('/:name/search', teamsController.searchTeamsByName); // GET /api/team
  *             properties:
  *               name:
  *                 type: string
+ *                 description: The name of the team
  *               code:
  *                 type: string
+ *                 description: Short code for the team
  *               country:
  *                 type: string
+ *                 description: The country of the team
  *               founded:
  *                 type: integer
+ *                 description: The founding year
  *               national:
  *                 type: boolean
+ *                 description: Whether it's a national team
  *               logo:
  *                 type: string
+ *                 description: URL to the team's logo
  *               venue_id:
  *                 type: integer
+ *                 description: ID of the home venue
  *               leagues_id:
  *                 type: integer
+ *                 description: ID of the league
  *             required:
  *               - name
+ *           example:
+ *             name: "New Team FC"
+ *             code: "NTFC"
+ *             country: "England"
+ *             founded: 2020
+ *             national: false
+ *             logo: "https://example.com/newlogo.png"
+ *             venue_id: 123
+ *             leagues_id: 39
  *     responses:
  *       201:
- *         description: Team được tạo thành công
+ *         description: Team created successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Team'
+ *             example:
+ *               id: 3
+ *               name: "New Team FC"
+ *               leagues_id: 39
+ *               code: "NTFC"
+ *               country: "England"
+ *               founded: 2020
+ *               national: false
+ *               logo: "https://example.com/newlogo.png"
+ *               venue_id: 123
+ *               created_at: "2023-11-04T12:00:00Z"
+ *               updated_at: "2023-11-04T12:00:00Z"
+ *       400:
+ *         description: Invalid input data provided
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while creating the team
  */
-router.post('/', teamsController.createTeam);          // POST /api/teams
+router.post('/teams', teamsController.createTeam);          // POST /api/teams
 
 /**
  * @openapi
  * /api/teams/{id}:
  *   put:
- *     summary: Cập nhật thông tin team theo id
+ *     summary: Update a team by ID
+ *     description: This endpoint updates the information of an existing team. Provide the team ID in the URL path and the updated data in the request body.
  *     tags:
  *       - Teams
  *     parameters:
@@ -201,33 +336,58 @@ router.post('/', teamsController.createTeam);          // POST /api/teams
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của team cần cập nhật
+ *         description: The unique identifier of the team to update
+ *         example: 1
  *     requestBody:
- *       description: Dữ liệu team để cập nhật
+ *       description: The updated data for the team
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Team'
+ *           example:
+ *             name: "Updated Team Name"
+ *             code: "UTN"
+ *             country: "England"
+ *             founded: 1878
+ *             national: false
+ *             logo: "https://example.com/updatedlogo.png"
+ *             venue_id: 556
+ *             leagues_id: 39
  *     responses:
  *       200:
- *         description: Team được cập nhật thành công
+ *         description: Team updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Team'
+ *             example:
+ *               id: 1
+ *               name: "Updated Team Name"
+ *               leagues_id: 39
+ *               code: "UTN"
+ *               country: "England"
+ *               founded: 1878
+ *               national: false
+ *               logo: "https://example.com/updatedlogo.png"
+ *               venue_id: 556
+ *               created_at: "2023-01-01T00:00:00Z"
+ *               updated_at: "2023-11-04T12:00:00Z"
+ *       400:
+ *         description: Invalid input data or team ID
  *       404:
  *         description: Team not found
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while updating the team
  */
-router.put('/:id', teamsController.updateTeam);       // PUT /api/teams/:id
+router.put('/teams/:id', teamsController.updateTeam);       // PUT /api/teams/:id
 
 /**
  * @openapi
  * /api/teams/{id}:
  *   delete:
- *     summary: Xóa team theo id
+ *     summary: Delete a team by ID
+ *     description: This endpoint deletes a team from the system. Provide the team ID in the URL path. This action cannot be undone.
  *     tags:
  *       - Teams
  *     parameters:
@@ -236,43 +396,77 @@ router.put('/:id', teamsController.updateTeam);       // PUT /api/teams/:id
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của team cần xóa
+ *         description: The unique identifier of the team to delete
+ *         example: 1
  *     responses:
- *       200:
- *         description: Team được xóa thành công
+ *       204:
+ *         description: Team deleted successfully (no content returned)
+ *       400:
+ *         description: Invalid team ID
  *       404:
  *         description: Team not found
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while deleting the team
  */
-router.delete('/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
+router.delete('/teams/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
 
 /**
  * @openapi
  * /api/teams/import:
  *   post:
- *     summary: Import teams từ league vào database
+ *     summary: Import teams from a league into the database
+ *     description: This endpoint imports team data for a specific league from an external source (e.g., API Football) and adds them to the database. This is typically used for initial data population or updates.
  *     tags:
  *       - Teams
+ *     requestBody:
+ *       description: The league ID to import teams for
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               league_id:
+ *                 type: integer
+ *                 description: The ID of the league to import teams from
+ *             required:
+ *               - league_id
+ *           example:
+ *             league_id: 39
  *     responses:
  *       200:
- *         description: Import thành công
+ *         description: Teams imported successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Team'
+ *             example:
+ *               - id: 1
+ *                 name: "Manchester United"
+ *                 leagues_id: 39
+ *                 code: "MUN"
+ *                 country: "England"
+ *                 founded: 1878
+ *                 national: false
+ *                 logo: "https://example.com/logo.png"
+ *                 venue_id: 556
+ *                 created_at: "2023-11-04T12:00:00Z"
+ *                 updated_at: "2023-11-04T12:00:00Z"
+ *       400:
+ *         description: Invalid league ID or import failed due to data issues
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred during import
  */
-router.post('/import', teamsController.importTeamsFromLeague); // POST /api/teams/import-from-league
+router.post('/teams/import', teamsController.importTeamsFromLeague); // POST /api/teams/import-from-league
 
 /**
  * @openapi
  * /api/teams/{id}:
  *   get:
- *     summary: Lấy thông tin team theo id
+ *     summary: Retrieve a team by ID
+ *     description: This endpoint fetches the details of a specific team using its unique identifier.
  *     tags:
  *       - Teams
  *     parameters:
@@ -281,19 +475,34 @@ router.post('/import', teamsController.importTeamsFromLeague); // POST /api/team
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của team
+ *         description: The unique identifier of the team
+ *         example: 1
  *     responses:
  *       200:
- *         description: Thông tin team
+ *         description: Team information
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Team'
+ *             example:
+ *               id: 1
+ *               name: "Manchester United"
+ *               leagues_id: 39
+ *               code: "MUN"
+ *               country: "England"
+ *               founded: 1878
+ *               national: false
+ *               logo: "https://example.com/logo.png"
+ *               venue_id: 556
+ *               created_at: "2023-01-01T00:00:00Z"
+ *               updated_at: "2023-01-01T00:00:00Z"
+ *       400:
+ *         description: Invalid team ID
  *       404:
  *         description: Team not found
  *       500:
- *         description: Internal Server Error
+ *         description: Internal server error occurred while retrieving the team
  */
-router.get('/:id', teamsController.getTeamById);     // GET /api/teams/:id
+router.get('/teams/:id', teamsController.getTeamById);     // GET /api/teams/:id
 
 export default router;

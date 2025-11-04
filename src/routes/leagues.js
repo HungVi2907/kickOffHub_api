@@ -29,34 +29,36 @@ const router = express.Router();
  *         - name
  */
 
-// Định tuyến cho Leagues
+// Routes for Leagues (English documentation)
 
 /**
  * @openapi
  * /api/leagues:
  *   get:
- *     summary: Lấy danh sách tất cả leagues
+ *     summary: Get a list of leagues
  *     tags:
  *       - Leagues
+ *     description: Returns an array of league objects.
  *     responses:
  *       200:
- *         description: Danh sách leagues
+ *         description: List of leagues
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/League'
+ *             example: [{ "id": 1, "name": "Premier League", "type": "league", "logo": "https://.../pl.png" }]
  *       500:
  *         description: Internal Server Error
  */
-router.get('/', LeaguesController.getAllLeagues);          // GET /api/leagues
+router.get('/leagues', LeaguesController.getAllLeagues);          // GET /api/leagues
 
 /**
  * @openapi
  * /api/leagues/{id}:
  *   get:
- *     summary: Lấy thông tin league theo id
+ *     summary: Get a single league by ID
  *     tags:
  *       - Leagues
  *     parameters:
@@ -66,30 +68,31 @@ router.get('/', LeaguesController.getAllLeagues);          // GET /api/leagues
  *         schema:
  *           type: integer
  *           format: int32
- *         description: ID của league
+ *         description: The ID of the league to retrieve
  *     responses:
  *       200:
- *         description: Thông tin league
+ *         description: League object
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/League'
+ *             example: { "id": 1, "name": "Premier League", "type": "league", "logo": "https://.../pl.png" }
  *       404:
  *         description: League not found
  *       500:
  *         description: Internal Server Error
  */
-router.get('/:id', LeaguesController.getLeagueById);      // GET /api/leagues/:id
+router.get('/leagues/:id', LeaguesController.getLeagueById);      // GET /api/leagues/:id
 
 /**
  * @openapi
  * /api/leagues:
  *   post:
- *     summary: Tạo mới một league
+ *     summary: Create a new league
  *     tags:
  *       - Leagues
  *     requestBody:
- *       description: Dữ liệu league cần tạo
+ *       description: League object to create
  *       required: true
  *       content:
  *         application/json:
@@ -104,23 +107,29 @@ router.get('/:id', LeaguesController.getLeagueById);      // GET /api/leagues/:i
  *                 type: string
  *             required:
  *               - name
+ *           example:
+ *             name: "Premier League"
+ *             type: "league"
+ *             logo: "https://example.com/logo.png"
  *     responses:
  *       201:
- *         description: League được tạo thành công
+ *         description: League created successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/League'
+ *       400:
+ *         description: Bad Request (invalid input)
  *       500:
  *         description: Internal Server Error
  */
-router.post('/', LeaguesController.createLeague);          // POST /api/leagues
+router.post('/leagues', LeaguesController.createLeague);          // POST /api/leagues
 
 /**
  * @openapi
  * /api/leagues/{id}:
  *   put:
- *     summary: Cập nhật thông tin league theo id
+ *     summary: Update an existing league by ID
  *     tags:
  *       - Leagues
  *     parameters:
@@ -130,33 +139,36 @@ router.post('/', LeaguesController.createLeague);          // POST /api/leagues
  *         schema:
  *           type: integer
  *           format: int32
- *         description: ID của league cần cập nhật
+ *         description: The ID of the league to update
  *     requestBody:
- *       description: Dữ liệu league để cập nhật
+ *       description: Updated league object
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/League'
+ *           example: { "name": "Premier League", "logo": "https://example.com/logo.png" }
  *     responses:
  *       200:
- *         description: League được cập nhật thành công
+ *         description: League updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/League'
+ *       400:
+ *         description: Bad Request (invalid input)
  *       404:
  *         description: League not found
  *       500:
  *         description: Internal Server Error
  */
-router.put('/:id', LeaguesController.updateLeague);       // PUT /api/leagues/:id
+router.put('/leagues/:id', LeaguesController.updateLeague);       // PUT /api/leagues/:id
 
 /**
  * @openapi
  * /api/leagues/{id}:
  *   delete:
- *     summary: Xóa league theo id
+ *     summary: Delete a league by ID
  *     tags:
  *       - Leagues
  *     parameters:
@@ -166,15 +178,15 @@ router.put('/:id', LeaguesController.updateLeague);       // PUT /api/leagues/:i
  *         schema:
  *           type: integer
  *           format: int32
- *         description: ID của league cần xóa
+ *         description: The ID of the league to delete
  *     responses:
  *       200:
- *         description: League được xóa thành công
+ *         description: League deleted successfully
  *       404:
  *         description: League not found
  *       500:
  *         description: Internal Server Error
  */
-router.delete('/:id', LeaguesController.deleteLeague);    // DELETE /api/leagues/:id
+router.delete('/leagues/:id', LeaguesController.deleteLeague);    // DELETE /api/leagues/:id
 
 export default router;

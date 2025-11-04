@@ -46,9 +46,9 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', userRoutes);
 app.use('/api', testRoutes);
 app.use('/api', countriesRoutes);
-app.use('/api/leagues', leaguesRoutes);
-app.use('/api/teams', teamsRoutes);
-app.use('/api/venues', venuesRoutes);
+app.use('/api', leaguesRoutes);
+app.use('/api', teamsRoutes);
+app.use('/api', venuesRoutes);
 
 // Route mặc định
 app.get('/', (req, res) => {
