@@ -42,7 +42,19 @@ const TeamsController = {
 
 	async createTeam(req, res) {
 		try {
-			const team = await Team.create(req.body);
+			// Accept only known fields and coerce leagues_id to integer or null
+			const payload = {
+				name: req.body.name,
+				code: req.body.code ?? null,
+				country: req.body.country ?? null,
+				founded: req.body.founded ? Number(req.body.founded) : null,
+				national: req.body.national ?? false,
+				logo: req.body.logo ?? null,
+				venue_id: req.body.venue_id ? Number(req.body.venue_id) : null,
+				leagues_id: req.body.leagues_id ? Number(req.body.leagues_id) : null
+			};
+
+			const team = await Team.create(payload);
 			res.status(201).json(team);
 		} catch (error) {
 			res.status(500).json({ error: 'Lỗi khi tạo team mới' });
@@ -52,7 +64,20 @@ const TeamsController = {
 	async updateTeam(req, res) {
 		try {
 			const { id } = req.params;
-			const [updatedRows] = await Team.update(req.body, { where: { id } });
+			// Build update payload safely
+			const updatePayload = {};
+			const fields = ['name','code','country','founded','national','logo','venue_id','leagues_id'];
+			for (const f of fields) {
+				if (Object.prototype.hasOwnProperty.call(req.body, f)) {
+					if (f === 'founded' || f === 'venue_id' || f === 'leagues_id') {
+						updatePayload[f] = req.body[f] !== null ? Number(req.body[f]) : null;
+					} else {
+						updatePayload[f] = req.body[f];
+					}
+				}
+			}
+
+			const [updatedRows] = await Team.update(updatePayload, { where: { id } });
 			if (updatedRows === 0) {
 				return res.status(404).json({ error: 'Team không tồn tại' });
 			}
@@ -136,7 +161,8 @@ const TeamsController = {
 					founded: teamData.founded,
 					national: teamData.national ?? false,
 					logo: teamData.logo ?? null,
-					venue_id: item?.venue?.id ?? null
+					venue_id: item?.venue?.id ?? null,
+					leagues_id: leagueId
 				};
 
 				await Team.upsert(payload);

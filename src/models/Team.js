@@ -40,7 +40,20 @@ const Team = sequelize.define('Team', {
 		references: {
 			model: 'venues',
 			key: 'id'
-		}
+		},
+		onDelete: 'SET NULL',
+		onUpdate: 'CASCADE'
+	}
+	,
+	leagues_id: {
+		type: DataTypes.INTEGER,
+		allowNull: true,
+		references: {
+			model: 'leagues',
+			key: 'id'
+		},
+		onDelete: 'SET NULL',
+		onUpdate: 'CASCADE'
 	}
 }, {
 	tableName: 'teams',
