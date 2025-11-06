@@ -6,7 +6,7 @@ const Team = sequelize.define('Team', {
 	id: {
 		type: DataTypes.INTEGER,
 		primaryKey: true,
-		autoIncrement: true,
+		autoIncrement: false,
 		allowNull: false
 	},
 	name: {
@@ -39,17 +39,6 @@ const Team = sequelize.define('Team', {
 		allowNull: true,
 		references: {
 			model: 'venues',
-			key: 'id'
-		},
-		onDelete: 'SET NULL',
-		onUpdate: 'CASCADE'
-	}
-	,
-	leagues_id: {
-		type: DataTypes.INTEGER,
-		allowNull: true,
-		references: {
-			model: 'leagues',
 			key: 'id'
 		},
 		onDelete: 'SET NULL',

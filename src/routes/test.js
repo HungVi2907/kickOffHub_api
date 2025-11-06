@@ -15,14 +15,14 @@ router.get('/test', (req, res) => {
 // Endpoint GET /api/test/api_football
 router.get('/test/api_football', async (req, res) => {
   try {
-    const response = await axios.get('https://v3.football.api-sports.io/players?season=2023&team=33', {
+    const response = await axios.get('https://v3.football.api-sports.io/leagues?country=world', {
       headers: {
         "x-apisports-key": process.env.API_FOOTBALL_KEY,
         "x-rapidapi-host": "v3.football.api-sports.io"
       }
     });
     res.json(response.data);
-  } catch (error) {
+  } catch (error) { 
     res.status(500).json({ error: "Failed to fetch data" });
   }
 });
@@ -39,5 +39,20 @@ router.get('/test/coach', async (req, res) => {
     res.status(500).json({ error: "Failed to fetch data" });
   }
 });
+
+router.get('/test/venues', async (req, res) => {
+  try {
+    const response = await axios.get('https://v3.football.api-sports.io/venues?id=596', {
+      headers: {
+        "x-apisports-key": process.env.API_FOOTBALL_KEY,
+        "x-rapidapi-host": "v3.football.api-sports.io"
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch data" });
+  }
+});
+
 
 export default router;

@@ -1,3 +1,4 @@
+import { Op, fn, col, where } from 'sequelize';
 import Country from '../models/Country.js';
 import { fetchCountries } from '../utils/fetchApiFootball.js';
 
@@ -10,6 +11,31 @@ class CountriesController {
       res.json(countries);
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi lấy danh sách countries' });
+    }
+  }
+
+  // Tìm kiếm countries theo tên (hỗ trợ tìm một phần)
+  static async getCountriesByName(req, res) {
+    try {
+      const { name } = req.query;
+      if (!name) {
+        return res.status(400).json({ error: 'Tên country là bắt buộc' });
+      }
+
+      const searchTerm = name.trim().toLowerCase();
+      if (!searchTerm) {
+        return res.status(400).json({ error: 'Tên country không được để trống' });
+      }
+
+      const countries = await Country.findAll({
+        where: where(fn('LOWER', col('name')), {
+          [Op.like]: `%${searchTerm}%`
+        })
+      });
+
+      res.json(countries);
+    } catch (error) {
+      res.status(500).json({ error: 'Lỗi khi tìm kiếm country theo tên' });
     }
   }
 
@@ -77,27 +103,6 @@ class CountriesController {
     }
   }
 
-  // Import countries từ API-Football
-  static async importFromApiFootball(req, res) {
-    try {
-      const countriesData = await fetchCountries();
-      let imported = 0;
-
-      for (const country of countriesData) {
-        // Upsert country (insert nếu chưa có, update nếu có)
-        await Country.upsert({
-          name: country.name,
-          code: country.code,
-          flag: country.flag
-        });
-        imported++;
-      }
-
-      res.json({ imported });
-    } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi import countries từ API-Football' });
-    }
-  }
 }
 
 export default CountriesController;

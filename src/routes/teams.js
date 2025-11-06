@@ -18,9 +18,6 @@ const router = express.Router();
  *         name:
  *           type: string
  *           description: The name of the team
- *         leagues_id:
- *           type: integer
- *           description: The ID of the league this team belongs to
  *         code:
  *           type: string
  *           description: Short code representing the team
@@ -52,7 +49,6 @@ const router = express.Router();
  *       example:
  *         id: 1
  *         name: "Manchester United"
- *         leagues_id: 39
  *         code: "MUN"
  *         country: "England"
  *         founded: 1878
@@ -83,7 +79,6 @@ const router = express.Router();
  *             example:
  *               - id: 1
  *                 name: "Manchester United"
- *                 leagues_id: 39
  *                 code: "MUN"
  *                 country: "England"
  *                 founded: 1878
@@ -94,7 +89,6 @@ const router = express.Router();
  *                 updated_at: "2023-01-01T00:00:00Z"
  *               - id: 2
  *                 name: "Real Madrid"
- *                 leagues_id: 140
  *                 code: "RMA"
  *                 country: "Spain"
  *                 founded: 1902
@@ -136,7 +130,6 @@ router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
  *             example:
  *               - id: 1
  *                 name: "Manchester United"
- *                 leagues_id: 39
  *                 code: "MUN"
  *                 country: "England"
  *                 founded: 1878
@@ -156,10 +149,10 @@ router.get('/teams/league/:leagueID', teamsController.getTeamsByLeague); // GET 
 
 /**
  * @openapi
- * /api/teams/{teamId}/stats:
+ * /api/teams/{teamId}/leagues/{leagueId}/season/{season}/stats:
  *   get:
- *     summary: Retrieve statistics for a specific team
- *     description: This endpoint provides statistical data for a team, optionally filtered by season. The team ID is required in the URL path, and season can be specified as a query parameter.
+ *     summary: Retrieve statistics for a specific team in a league for a season
+ *     description: This endpoint provides statistical data for a team for a specific league and season. All parameters are required and must match API-Football requirements.
  *     tags:
  *       - Teams
  *     parameters:
@@ -169,37 +162,42 @@ router.get('/teams/league/:leagueID', teamsController.getTeamsByLeague); // GET 
  *         schema:
  *           type: integer
  *         description: The unique identifier of the team
- *         example: 1
- *       - in: query
- *         name: season
- *         required: false
+ *         example: 33
+ *       - in: path
+ *         name: leagueId
+ *         required: true
  *         schema:
- *           type: string
- *         description: The season year for which to retrieve statistics (e.g., "2023")
- *         example: "2023"
+ *           type: integer
+ *         description: The unique identifier of the league (API-Football league id)
+ *         example: 39
+ *       - in: path
+ *         name: season
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The season year for which to retrieve statistics (e.g., 2023)
+ *         example: 2023
  *     responses:
  *       200:
- *         description: Statistics for the team
+ *         description: Statistics for the team in the specified league and season
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *             example:
- *               team_id: 1
- *               season: "2023"
- *               wins: 20
- *               draws: 10
- *               losses: 8
- *               goals_for: 65
- *               goals_against: 35
+ *               teamId: 33
+ *               leagueId: 39
+ *               season: 2023
+ *               source: "API-Football"
+ *               payload: { }
  *       400:
- *         description: Invalid team ID or season parameter
+ *         description: Invalid teamId, leagueId, or season parameter
  *       404:
  *         description: Team not found
  *       500:
  *         description: Internal server error occurred while retrieving statistics
  */
-router.get('/teams/:teamId/stats', teamsController.getStatsByTeamIdAndSeason); // GET /api/teams/:teamId/stats
+router.get('/teams/:teamId/leagues/:leagueId/season/:season/stats', teamsController.getStatsByTeamIdAndSeason); // GET /api/teams/:teamId/leagues/:leagueId/season/:season/stats
 
 /**
  * @openapi
@@ -229,7 +227,6 @@ router.get('/teams/:teamId/stats', teamsController.getStatsByTeamIdAndSeason); /
  *             example:
  *               - id: 1
  *                 name: "Manchester United"
- *                 leagues_id: 39
  *                 code: "MUN"
  *                 country: "England"
  *                 founded: 1878
@@ -282,9 +279,6 @@ router.get('/teams/:name/search', teamsController.searchTeamsByName); // GET /ap
  *               venue_id:
  *                 type: integer
  *                 description: ID of the home venue
- *               leagues_id:
- *                 type: integer
- *                 description: ID of the league
  *             required:
  *               - name
  *           example:
@@ -295,7 +289,6 @@ router.get('/teams/:name/search', teamsController.searchTeamsByName); // GET /ap
  *             national: false
  *             logo: "https://example.com/newlogo.png"
  *             venue_id: 123
- *             leagues_id: 39
  *     responses:
  *       201:
  *         description: Team created successfully
@@ -306,7 +299,6 @@ router.get('/teams/:name/search', teamsController.searchTeamsByName); // GET /ap
  *             example:
  *               id: 3
  *               name: "New Team FC"
- *               leagues_id: 39
  *               code: "NTFC"
  *               country: "England"
  *               founded: 2020
@@ -353,7 +345,6 @@ router.post('/teams', teamsController.createTeam);          // POST /api/teams
  *             national: false
  *             logo: "https://example.com/updatedlogo.png"
  *             venue_id: 556
- *             leagues_id: 39
  *     responses:
  *       200:
  *         description: Team updated successfully
@@ -364,7 +355,6 @@ router.post('/teams', teamsController.createTeam);          // POST /api/teams
  *             example:
  *               id: 1
  *               name: "Updated Team Name"
- *               leagues_id: 39
  *               code: "UTN"
  *               country: "England"
  *               founded: 1878
@@ -409,58 +399,6 @@ router.put('/teams/:id', teamsController.updateTeam);       // PUT /api/teams/:i
  *         description: Internal server error occurred while deleting the team
  */
 router.delete('/teams/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
-
-/**
- * @openapi
- * /api/teams/import:
- *   post:
- *     summary: Import teams from a league into the database
- *     description: This endpoint imports team data for a specific league from an external source (e.g., API Football) and adds them to the database. This is typically used for initial data population or updates.
- *     tags:
- *       - Teams
- *     requestBody:
- *       description: The league ID to import teams for
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               league_id:
- *                 type: integer
- *                 description: The ID of the league to import teams from
- *             required:
- *               - league_id
- *           example:
- *             league_id: 39
- *     responses:
- *       200:
- *         description: Teams imported successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Team'
- *             example:
- *               - id: 1
- *                 name: "Manchester United"
- *                 leagues_id: 39
- *                 code: "MUN"
- *                 country: "England"
- *                 founded: 1878
- *                 national: false
- *                 logo: "https://example.com/logo.png"
- *                 venue_id: 556
- *                 created_at: "2023-11-04T12:00:00Z"
- *                 updated_at: "2023-11-04T12:00:00Z"
- *       400:
- *         description: Invalid league ID or import failed due to data issues
- *       500:
- *         description: Internal server error occurred during import
- */
-router.post('/teams/import', teamsController.importTeamsFromLeague); // POST /api/teams/import-from-league
-
 /**
  * @openapi
  * /api/teams/{id}:
@@ -487,7 +425,6 @@ router.post('/teams/import', teamsController.importTeamsFromLeague); // POST /ap
  *             example:
  *               id: 1
  *               name: "Manchester United"
- *               leagues_id: 39
  *               code: "MUN"
  *               country: "England"
  *               founded: 1878

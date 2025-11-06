@@ -1,7 +1,5 @@
 import { Op } from 'sequelize';
 import Team from '../models/Team.js';
-import { getTeamsByLeague as fetchTeamsByLeague } from '../utils/fetchApiFootball.js';
-
 const TeamsController = {
 	async getAllTeams(req, res) {
 		try {
@@ -42,7 +40,7 @@ const TeamsController = {
 
 	async createTeam(req, res) {
 		try {
-			// Accept only known fields and coerce leagues_id to integer or null
+			// Accept only known fields and coerce numeric inputs when needed
 			const payload = {
 				name: req.body.name,
 				code: req.body.code ?? null,
@@ -50,8 +48,7 @@ const TeamsController = {
 				founded: req.body.founded ? Number(req.body.founded) : null,
 				national: req.body.national ?? false,
 				logo: req.body.logo ?? null,
-				venue_id: req.body.venue_id ? Number(req.body.venue_id) : null,
-				leagues_id: req.body.leagues_id ? Number(req.body.leagues_id) : null
+				venue_id: req.body.venue_id ? Number(req.body.venue_id) : null
 			};
 
 			const team = await Team.create(payload);
@@ -66,10 +63,10 @@ const TeamsController = {
 			const { id } = req.params;
 			// Build update payload safely
 			const updatePayload = {};
-			const fields = ['name','code','country','founded','national','logo','venue_id','leagues_id'];
+			const fields = ['name','code','country','founded','national','logo','venue_id'];
 			for (const f of fields) {
 				if (Object.prototype.hasOwnProperty.call(req.body, f)) {
-					if (f === 'founded' || f === 'venue_id' || f === 'leagues_id') {
+					if (f === 'founded' || f === 'venue_id') {
 						updatePayload[f] = req.body[f] !== null ? Number(req.body[f]) : null;
 					} else {
 						updatePayload[f] = req.body[f];
@@ -135,72 +132,28 @@ const TeamsController = {
 		}
 	},
 
-	async importTeamsFromLeague(req, res) {
-		try {
-			const leagueId = Number(req.body.leagueId) || 39;
-			const season = Number(req.body.season) || 2023;
-			const apiTeams = await fetchTeamsByLeague(leagueId, season);
-
-			if (!Array.isArray(apiTeams) || apiTeams.length === 0) {
-				console.log('Không có dữ liệu teams trả về từ API.');
-				return res.status(200).json({ message: 'Không có dữ liệu team để import', imported: 0 });
-			}
-
-			let processedCount = 0;
-			for (const item of apiTeams) {
-				const teamData = item?.team;
-				if (!teamData?.id) {
-					continue;
-				}
-
-				const payload = {
-					id: teamData.id,
-					name: teamData.name,
-					code: teamData.code,
-					country: teamData.country,
-					founded: teamData.founded,
-					national: teamData.national ?? false,
-					logo: teamData.logo ?? null,
-					venue_id: item?.venue?.id ?? null,
-					leagues_id: leagueId
-				};
-
-				await Team.upsert(payload);
-				processedCount += 1;
-			}
-
-			console.log(`Đã import/cập nhật ${processedCount} teams từ league ${leagueId}.`);
-			res.status(200).json({ message: 'Import teams thành công', imported: processedCount });
-		} catch (error) {
-			console.error('Lỗi khi import teams:', error);
-			res.status(500).json({ error: 'Lỗi khi import dữ liệu teams' });
-		}
-	},
 	async getStatsByTeamIdAndSeason(req, res) {
 		try {
-			const teamIdParam = req.params.teamId ?? req.params.id ?? req.query.teamId;
-			const teamId = Number(teamIdParam);
+			const rawTeamId = req.params.teamId ?? req.params.id ?? req.query.teamId;
+			const rawLeagueId = req.params.leagueId ?? req.params.leagues_id ?? req.query.league;
+			const rawSeason = req.params.season ?? req.query.season;
+
+			const teamId = Number(rawTeamId);
 			if (!Number.isFinite(teamId) || teamId <= 0) {
 				return res.status(400).json({ error: 'teamId không hợp lệ' });
 			}
 
-			const rawLeague = req.query.league;
-			const league = rawLeague ? Number(rawLeague) : 39;
-			if (!Number.isFinite(league) || league <= 0) {
-				return res.status(400).json({ error: 'league không hợp lệ' });
+			const leagueId = Number(rawLeagueId);
+			if (!Number.isFinite(leagueId) || leagueId <= 0) {
+				return res.status(400).json({ error: 'leagueId không hợp lệ' });
 			}
 
-			const rawSeason = req.query.season;
-			let season = 2023;
-			if (rawSeason) {
-				const parsedSeason = Number(rawSeason);
-				if (!Number.isFinite(parsedSeason)) {
-					return res.status(400).json({ error: 'season không hợp lệ' });
-				}
-				season = parsedSeason;
+			const season = Number(rawSeason);
+			if (!Number.isFinite(season) || season <= 0) {
+				return res.status(400).json({ error: 'season không hợp lệ' });
 			}
 
-			const queryParams = new URLSearchParams({ league: String(league), team: String(teamId), season: String(season) });
+			const queryParams = new URLSearchParams({ league: String(leagueId), team: String(teamId), season: String(season) });
 			const response = await fetch(`https://v3.football.api-sports.io/teams/statistics?${queryParams.toString()}`, {
 				headers: {
 					"x-apisports-key": process.env.API_FOOTBALL_KEY,
@@ -219,7 +172,8 @@ const TeamsController = {
 
 			const data = await response.json();
 			res.json({
-				league,
+				league: leagueId,
+				leagueId,
 				season,
 				teamId,
 				source: 'API-Football',

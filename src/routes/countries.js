@@ -56,6 +56,38 @@ router.get('/countries', CountriesController.getAllCountries);          // GET /
 
 /**
  * @openapi
+ * /api/countries/search:
+ *   get:
+ *     summary: Search countries by name
+ *     tags:
+ *       - Countries
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Name or partial name of the country to search for
+ *     description: Performs a case-insensitive search on the country name and returns all matches.
+ *     responses:
+ *       200:
+ *         description: Matching countries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Country'
+ *             example: [{ "id": 1, "name": "England", "code": "ENG" }]
+ *       400:
+ *         description: Missing or empty name query parameter
+ *       500:
+ *         description: Internal Server Error
+ */
+router.get('/countries/search', CountriesController.getCountriesByName); // GET /api/countries/search
+
+/**
+ * @openapi
  * /api/countries/{id}:
  *   get:
  *     summary: Get a single country by ID
@@ -189,31 +221,4 @@ router.put('/countries/:id', CountriesController.updateCountry);       // PUT /a
  *         description: Internal Server Error
  */
 router.delete('/countries/:id', CountriesController.deleteCountry);    // DELETE /api/countries/:id
-
-/**
- * @openapi
- * /api/countries/import:
- *   post:
- *     summary: Import countries from the external API-Football and save to database
- *     tags:
- *       - Countries
- *     description: Fetches country data from API-Football and inserts or updates records in the local database.
- *     responses:
- *       200:
- *         description: Import completed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 imported:
- *                   type: integer
- *             example: { "message": "Import completed", "imported": 42 }
- *       500:
- *         description: Internal Server Error
- */
-router.post('/countries/import', CountriesController.importFromApiFootball); // POST /api/countries/import
-
 export default router;
