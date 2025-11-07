@@ -1,10 +1,55 @@
 import { Op } from 'sequelize';
 import Team from '../models/Team.js';
+import LeagueTeamSeason from '../models/LeagueTeamSeason.js';
 const TeamsController = {
 	async getAllTeams(req, res) {
 		try {
-			const teams = await Team.findAll();
-			res.json(teams);
+			const { page, limit } = req.query;
+			const parsePositiveIntOrDefault = (value, defaultValue) => {
+				if (value === undefined || value === null) {
+					return defaultValue;
+				}
+				const trimmed = String(value).trim();
+				if (trimmed === '') {
+					return defaultValue;
+				}
+				const parsed = Number.parseInt(trimmed, 10);
+				if (!Number.isInteger(parsed) || parsed < 1) {
+					return null;
+				}
+				return parsed;
+			};
+
+			const pageNumber = parsePositiveIntOrDefault(page, 1);
+			if (pageNumber === null) {
+				return res.status(400).json({ error: 'Giá trị page phải là số nguyên dương' });
+			}
+
+			const limitNumber = parsePositiveIntOrDefault(limit, 20);
+			if (limitNumber === null) {
+				return res.status(400).json({ error: 'Giá trị limit phải là số nguyên dương' });
+			}
+
+			const offset = (pageNumber - 1) * limitNumber;
+
+			const { rows, count } = await Team.findAndCountAll({
+				attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'created_at', 'updated_at'],
+				order: [['name', 'ASC']],
+				limit: limitNumber,
+				offset
+			});
+
+			const totalPages = Math.ceil(count / limitNumber);
+
+			res.json({
+				data: rows,
+				pagination: {
+					totalItems: count,
+					totalPages,
+					page: pageNumber,
+					limit: limitNumber
+				}
+			});
 		} catch (error) {
 			res.status(500).json({ error: 'Lỗi khi lấy danh sách teams' });
 		}
@@ -13,7 +58,13 @@ const TeamsController = {
 	async getTeamById(req, res) {
 		try {
 			const { id } = req.params;
-			const team = await Team.findByPk(id);
+			const teamId = Number.parseInt(id, 10);
+			if (!Number.isInteger(teamId) || teamId <= 0) {
+				return res.status(400).json({ error: 'ID team không hợp lệ' });
+			}
+			const team = await Team.findByPk(teamId,
+				{ attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'created_at', 'updated_at'] }
+			);
 			if (!team) {
 				return res.status(404).json({ error: 'Team không tồn tại' });
 			}
@@ -25,14 +76,51 @@ const TeamsController = {
 
 	async getTeamsByLeague(req, res) {
 		try {
-			const leagueId = Number(req.params.leagueID);
-			if (!leagueId) {
+			const rawLeagueId = req.params.leagueID;
+			const leagueId = Number.parseInt(rawLeagueId, 10);
+			if (!Number.isInteger(leagueId) || leagueId <= 0) {
 				return res.status(400).json({ error: 'leagueID không hợp lệ' });
 			}
 
-			const season = req.query.season ? Number(req.query.season) : 2023;
-			const apiTeams = await fetchTeamsByLeague(leagueId, season);
-			res.json(apiTeams);
+			const { season } = req.query;
+			let parsedSeason;
+			if (season !== undefined) {
+				const trimmed = String(season).trim();
+				if (trimmed !== '') {
+					const seasonNumber = Number.parseInt(trimmed, 10);
+					if (!Number.isInteger(seasonNumber) || seasonNumber <= 0) {
+						return res.status(400).json({ error: 'season không hợp lệ' });
+					}
+					parsedSeason = seasonNumber;
+				}
+			}
+
+			const pivotWhere = { leagueId };
+			if (parsedSeason !== undefined) {
+				pivotWhere.season = parsedSeason;
+			}
+
+			const mappings = await LeagueTeamSeason.findAll({
+				where: pivotWhere,
+				attributes: ['teamId']
+			});
+
+			if (mappings.length === 0) {
+				return res.status(404).json({ error: 'Không tìm thấy đội bóng cho leagueID đã cung cấp' });
+			}
+
+			const teamIds = [...new Set(mappings.map((entry) => entry.teamId))];
+			const teams = await Team.findAll({
+				attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'created_at', 'updated_at'],
+				where: { id: { [Op.in]: teamIds } },
+				order: [['name', 'ASC']]
+			});
+
+			if (teams.length === 0) {
+				return res.status(404).json({ error: 'Không tìm thấy đội bóng trong cơ sở dữ liệu cho leagueID này' });
+			}
+
+			res.json(teams);
 		} catch (error) {
 			res.status(500).json({ error: 'Lỗi khi lấy teams theo league' });
 		}
@@ -61,6 +149,10 @@ const TeamsController = {
 	async updateTeam(req, res) {
 		try {
 			const { id } = req.params;
+			const teamId = Number.parseInt(id, 10);
+			if (!Number.isInteger(teamId) || teamId <= 0) {
+				return res.status(400).json({ error: 'ID team không hợp lệ' });
+			}
 			// Build update payload safely
 			const updatePayload = {};
 			const fields = ['name','code','country','founded','national','logo','venue_id'];
@@ -74,11 +166,11 @@ const TeamsController = {
 				}
 			}
 
-			const [updatedRows] = await Team.update(updatePayload, { where: { id } });
+			const [updatedRows] = await Team.update(updatePayload, { where: { id: teamId } });
 			if (updatedRows === 0) {
 				return res.status(404).json({ error: 'Team không tồn tại' });
 			}
-			const updatedTeam = await Team.findByPk(id);
+			const updatedTeam = await Team.findByPk(teamId);
 			res.json(updatedTeam);
 		} catch (error) {
 			res.status(500).json({ error: 'Lỗi khi cập nhật team' });
@@ -88,7 +180,11 @@ const TeamsController = {
 	async deleteTeam(req, res) {
 		try {
 			const { id } = req.params;
-			const deletedRows = await Team.destroy({ where: { id } });
+			const teamId = Number.parseInt(id, 10);
+			if (!Number.isInteger(teamId) || teamId <= 0) {
+				return res.status(400).json({ error: 'ID team không hợp lệ' });
+			}
+			const deletedRows = await Team.destroy({ where: { id: teamId } });
 			if (deletedRows === 0) {
 				return res.status(404).json({ error: 'Team không tồn tại' });
 			}
@@ -100,15 +196,25 @@ const TeamsController = {
 
 	async searchTeamsByName(req, res) {
 		try {
-			const rawName = req.params.name;
+			const rawName = req.query.name;
 			const keyword = typeof rawName === 'string' ? rawName.trim() : '';
 
 			if (!keyword) {
 				return res.status(400).json({ error: 'Tên đội bóng không hợp lệ' });
 			}
 
-			const rawLimit = Number(req.query.limit);
-			const limit = Number.isFinite(rawLimit) && rawLimit > 0 && rawLimit <= 100 ? rawLimit : 20;
+			const rawLimit = req.query.limit;
+			let limit = 20;
+			if (rawLimit !== undefined) {
+				const trimmedLimit = String(rawLimit).trim();
+				if (trimmedLimit !== '') {
+					const parsedLimit = Number.parseInt(trimmedLimit, 10);
+					if (!Number.isInteger(parsedLimit) || parsedLimit <= 0 || parsedLimit > 100) {
+						return res.status(400).json({ error: 'Giá trị limit không hợp lệ (1-100)' });
+					}
+					limit = parsedLimit;
+				}
+			}
 
 			const escapedKeyword = keyword.replace(/[%_]/g, '\\$&');
 			const teams = await Team.findAll({

@@ -64,39 +64,76 @@ const router = express.Router();
  * /api/teams:
  *   get:
  *     summary: Retrieve a list of all teams
- *     description: This endpoint returns a list of all teams in the system. Useful for displaying available teams or for administrative purposes.
  *     tags:
  *       - Teams
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page index (1-based)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 20
+ *         description: Number of teams per page
+ *     description: Returns a paginated list of teams ordered alphabetically by name.
  *     responses:
  *       200:
- *         description: A list of teams
+ *         description: Paginated list of teams
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Team'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Team'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
  *             example:
- *               - id: 1
- *                 name: "Manchester United"
- *                 code: "MUN"
- *                 country: "England"
- *                 founded: 1878
- *                 national: false
- *                 logo: "https://example.com/logo.png"
- *                 venue_id: 556
- *                 created_at: "2023-01-01T00:00:00Z"
- *                 updated_at: "2023-01-01T00:00:00Z"
- *               - id: 2
- *                 name: "Real Madrid"
- *                 code: "RMA"
- *                 country: "Spain"
- *                 founded: 1902
- *                 national: false
- *                 logo: "https://example.com/logo2.png"
- *                 venue_id: 1456
- *                 created_at: "2023-01-01T00:00:00Z"
- *                 updated_at: "2023-01-01T00:00:00Z"
+ *               data:
+ *                 - id: 1
+ *                   name: "Manchester United"
+ *                   code: "MUN"
+ *                   country: "England"
+ *                   founded: 1878
+ *                   national: false
+ *                   logo: "https://example.com/logo.png"
+ *                   venue_id: 556
+ *                   created_at: "2023-01-01T00:00:00Z"
+ *                   updated_at: "2023-02-01T00:00:00Z"
+ *                 - id: 2
+ *                   name: "Real Madrid"
+ *                   code: "RMA"
+ *                   country: "Spain"
+ *                   founded: 1902
+ *                   national: false
+ *                   logo: "https://example.com/logo2.png"
+ *                   venue_id: 1456
+ *                   created_at: "2023-01-05T00:00:00Z"
+ *                   updated_at: "2023-02-10T00:00:00Z"
+ *               pagination:
+ *                 totalItems: 2
+ *                 totalPages: 1
+ *                 page: 1
+ *                 limit: 20
  *       500:
  *         description: Internal server error occurred while retrieving teams
  */
@@ -118,6 +155,13 @@ router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
  *           type: integer
  *         description: The unique identifier of the league
  *         example: 39
+ *       - in: query
+ *         name: season
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Optional season year to filter by
  *     responses:
  *       200:
  *         description: A list of teams in the specified league
@@ -137,11 +181,11 @@ router.get('/teams', teamsController.getAllTeams);          // GET /api/teams
  *                 logo: "https://example.com/logo.png"
  *                 venue_id: 556
  *                 created_at: "2023-01-01T00:00:00Z"
- *                 updated_at: "2023-01-01T00:00:00Z"
+ *                 updated_at: "2023-02-01T00:00:00Z"
  *       400:
- *         description: Invalid league ID provided
+ *         description: Invalid league ID or season supplied
  *       404:
- *         description: League not found
+ *         description: No team mappings found for the given league (and season)
  *       500:
  *         description: Internal server error occurred while retrieving teams
  */
@@ -201,46 +245,111 @@ router.get('/teams/:teamId/leagues/:leagueId/season/:season/stats', teamsControl
 
 /**
  * @openapi
- * /api/teams/{name}/search:
+ * /api/teams/search:
  *   get:
  *     summary: Search teams by name
  *     description: This endpoint searches for teams whose names match or contain the provided search term. The search is case-insensitive and supports partial matches.
  *     tags:
  *       - Teams
  *     parameters:
- *       - in: path
+ *       - in: query
  *         name: name
  *         required: true
  *         schema:
  *           type: string
  *         description: The name or partial name of the team to search for
  *         example: "Manchester"
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Maximum number of teams to return (1-100)
  *     responses:
  *       200:
- *         description: A list of teams matching the search criteria
+ *         description: Teams matching the search criteria with metadata
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Team'
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Team'
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 keyword:
+ *                   type: string
  *             example:
- *               - id: 1
- *                 name: "Manchester United"
- *                 code: "MUN"
- *                 country: "England"
- *                 founded: 1878
- *                 national: false
- *                 logo: "https://example.com/logo.png"
- *                 venue_id: 556
- *                 created_at: "2023-01-01T00:00:00Z"
- *                 updated_at: "2023-01-01T00:00:00Z"
+ *               results:
+ *                 - id: 1
+ *                   name: "Manchester United"
+ *                   code: "MUN"
+ *                   country: "England"
+ *                   founded: 1878
+ *                   national: false
+ *                   logo: "https://example.com/logo.png"
+ *                   venue_id: 556
+ *                   created_at: "2023-01-01T00:00:00Z"
+ *                   updated_at: "2023-02-01T00:00:00Z"
+ *               total: 1
+ *               limit: 20
+ *               keyword: "Manchester"
  *       400:
- *         description: Invalid search term provided
+ *         description: Invalid search term provided or invalid limit value
  *       500:
  *         description: Internal server error occurred during search
  */
-router.get('/teams/:name/search', teamsController.searchTeamsByName); // GET /api/teams/:name/search
+router.get('/teams/search', teamsController.searchTeamsByName); // GET /api/teams/search
+
+/**
+ * @openapi
+ * /api/teams/{id}:
+ *   get:
+ *     summary: Retrieve a team by ID
+ *     description: This endpoint fetches the details of a specific team using its unique identifier.
+ *     tags:
+ *       - Teams
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The unique identifier of the team
+ *         example: 1
+ *     responses:
+ *       200:
+ *         description: Team information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Team'
+ *             example:
+ *               id: 1
+ *               name: "Manchester United"
+ *               code: "MUN"
+ *               country: "England"
+ *               founded: 1878
+ *               national: false
+ *               logo: "https://example.com/logo.png"
+ *               venue_id: 556
+ *               created_at: "2023-01-01T00:00:00Z"
+ *               updated_at: "2023-02-01T00:00:00Z"
+ *       400:
+ *         description: Invalid team ID
+ *       404:
+ *         description: Team not found
+ *       500:
+ *         description: Internal server error occurred while retrieving the team
+ */
+router.get('/teams/:id', teamsController.getTeamById);     // GET /api/teams/:id
 
 /**
  * @openapi
@@ -399,47 +508,5 @@ router.put('/teams/:id', teamsController.updateTeam);       // PUT /api/teams/:i
  *         description: Internal server error occurred while deleting the team
  */
 router.delete('/teams/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
-/**
- * @openapi
- * /api/teams/{id}:
- *   get:
- *     summary: Retrieve a team by ID
- *     description: This endpoint fetches the details of a specific team using its unique identifier.
- *     tags:
- *       - Teams
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: The unique identifier of the team
- *         example: 1
- *     responses:
- *       200:
- *         description: Team information
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Team'
- *             example:
- *               id: 1
- *               name: "Manchester United"
- *               code: "MUN"
- *               country: "England"
- *               founded: 1878
- *               national: false
- *               logo: "https://example.com/logo.png"
- *               venue_id: 556
- *               created_at: "2023-01-01T00:00:00Z"
- *               updated_at: "2023-01-01T00:00:00Z"
- *       400:
- *         description: Invalid team ID
- *       404:
- *         description: Team not found
- *       500:
- *         description: Internal server error occurred while retrieving the team
- */
-router.get('/teams/:id', teamsController.getTeamById);     // GET /api/teams/:id
 
 export default router;

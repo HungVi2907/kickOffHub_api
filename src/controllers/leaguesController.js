@@ -5,7 +5,9 @@ class LeaguesController {
   // Lấy danh sách tất cả leagues
   static async getAllLeagues(req, res) {
     try {
-      const leagues = await League.findAll();
+      const leagues = await League.findAll({
+        attributes: ['id', 'name', 'type', 'logo']
+      });
       res.json(leagues);
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi lấy danh sách leagues' });
@@ -16,7 +18,13 @@ class LeaguesController {
   static async getLeagueById(req, res) {
     try {
       const { id } = req.params;
-      const league = await League.findByPk(id);
+      const leagueId = Number.parseInt(id, 10);
+      if (!Number.isInteger(leagueId) || leagueId <= 0) {
+        return res.status(400).json({ error: 'ID league không hợp lệ' });
+      }
+
+      const league = await League.findByPk(leagueId,
+        { attributes: ['id', 'name', 'type', 'logo'] });
       if (!league) {
         return res.status(404).json({ error: 'League không tồn tại' });
       }
@@ -44,18 +52,22 @@ class LeaguesController {
   static async updateLeague(req, res) {
     try {
       const { id } = req.params;
+      const leagueId = Number.parseInt(id, 10);
+      if (!Number.isInteger(leagueId) || leagueId <= 0) {
+        return res.status(400).json({ error: 'ID league không hợp lệ' });
+      }
       const { name, type, logo } = req.body;
       if (!name) {
         return res.status(400).json({ error: 'Tên là bắt buộc' });
       }
       const [updated] = await League.update(
         { name, type, logo },
-        { where: { id } }
+        { where: { id: leagueId } }
       );
       if (updated === 0) {
         return res.status(404).json({ error: 'League không tồn tại' });
       }
-      const league = await League.findByPk(id);
+      const league = await League.findByPk(leagueId);
       res.json(league);
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi cập nhật league' });
@@ -66,7 +78,12 @@ class LeaguesController {
   static async deleteLeague(req, res) {
     try {
       const { id } = req.params;
-      const deleted = await League.destroy({ where: { id } });
+      const leagueId = Number.parseInt(id, 10);
+      if (!Number.isInteger(leagueId) || leagueId <= 0) {
+        return res.status(400).json({ error: 'ID league không hợp lệ' });
+      }
+
+      const deleted = await League.destroy({ where: { id: leagueId } });
       if (deleted === 0) {
         return res.status(404).json({ error: 'League không tồn tại' });
       }

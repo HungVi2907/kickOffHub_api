@@ -64,7 +64,7 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
 // Mount Swagger UI at /api/docs
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec,{swaggerOptions:{operationsSorter:'method'}}));
 
 // Sử dụng routes
 app.use('/api', userRoutes);

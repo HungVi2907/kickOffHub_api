@@ -15,7 +15,7 @@ router.get('/test', (req, res) => {
 // Endpoint GET /api/test/api_football
 router.get('/test/api_football', async (req, res) => {
   try {
-    const response = await axios.get('https://v3.football.api-sports.io/leagues?country=world', {
+    const response = await axios.get('https://v3.football.api-sports.io/players/profiles', {
       headers: {
         "x-apisports-key": process.env.API_FOOTBALL_KEY,
         "x-rapidapi-host": "v3.football.api-sports.io"

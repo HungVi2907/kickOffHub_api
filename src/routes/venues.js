@@ -53,7 +53,21 @@ const router = express.Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Venue'
- *             example: [{ "id": 1, "name": "Emirates Stadium", "city": "London", "capacity": 60260 }]
+ *             example:
+ *               - id: 494
+ *                 name: "Emirates Stadium"
+ *                 address: "Hornsey Road"
+ *                 city: "London"
+ *                 capacity: 60383
+ *                 surface: "grass"
+ *                 image: "https://media.api-sports.io/football/venues/494.png"
+ *               - id: 495
+ *                 name: "Villa Park"
+ *                 address: "Trinity Road"
+ *                 city: "Birmingham"
+ *                 capacity: 42824
+ *                 surface: "grass"
+ *                 image: "https://media.api-sports.io/football/venues/495.png"
  *       500:
  *         description: Internal Server Error
  */
@@ -80,7 +94,16 @@ router.get('/venues', venuesController.getAllVenues);          // GET /api/venue
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Venue'
- *             example: { "id": 1, "name": "Emirates Stadium", "city": "London", "capacity": 60260 }
+ *             example:
+ *               id: 556
+ *               name: "Old Trafford"
+ *               address: "Sir Matt Busby Way"
+ *               city: "Manchester"
+ *               capacity: 76212
+ *               surface: "grass"
+ *               image: "https://media.api-sports.io/football/venues/556.png"
+ *       400:
+ *         description: Invalid venue ID supplied
  *       404:
  *         description: Venue not found
  *       500:
@@ -155,7 +178,9 @@ router.post('/venues', venuesController.createVenue);          // POST /api/venu
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Venue'
- *           example: { "name": "Emirates Stadium", "city": "London" }
+ *           example:
+ *             name: "Emirates Stadium"
+ *             city: "London"
  *     responses:
  *       200:
  *         description: Venue updated successfully
@@ -164,7 +189,7 @@ router.post('/venues', venuesController.createVenue);          // POST /api/venu
  *             schema:
  *               $ref: '#/components/schemas/Venue'
  *       400:
- *         description: Bad Request (invalid input)
+ *         description: Invalid venue ID supplied or request payload invalid
  *       404:
  *         description: Venue not found
  *       500:

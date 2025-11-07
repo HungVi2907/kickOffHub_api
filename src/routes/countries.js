@@ -38,17 +38,68 @@ const router = express.Router();
  *     summary: Get a list of all countries
  *     tags:
  *       - Countries
- *     description: Returns an array of country objects.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page index (1-based)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 20
+ *         description: Number of items per page
+ *     description: Returns a paginated list of country objects limited to id, name, code, and flag fields.
  *     responses:
  *       200:
- *         description: A JSON array of countries
+ *         description: Paginated list of countries
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Country'
- *             example: [{ "id": 1, "name": "England", "code": "ENG", "flag": "url/to/flag.png" }]
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         format: int32
+ *                       name:
+ *                         type: string
+ *                       code:
+ *                         type: string
+ *                       flag:
+ *                         type: string
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *             example:
+ *               data:
+ *                 - id: 1
+ *                   name: "England"
+ *                   code: "ENG"
+ *                   flag: "url/to/flag.png"
+ *               pagination:
+ *                 totalItems: 171
+ *                 totalPages: 9
+ *                 page: 1
+ *                 limit: 20
  *       500:
  *         description: Internal Server Error
  */
@@ -77,8 +128,22 @@ router.get('/countries', CountriesController.getAllCountries);          // GET /
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Country'
- *             example: [{ "id": 1, "name": "England", "code": "ENG" }]
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     format: int32
+ *                   name:
+ *                     type: string
+ *                   code:
+ *                     type: string
+ *                   flag:
+ *                     type: string
+ *             example:
+ *               - id: 1
+ *                 name: "England"
+ *                 code: "ENG"
+ *                 flag: "url/to/flag.png"
  *       400:
  *         description: Missing or empty name query parameter
  *       500:
@@ -108,7 +173,13 @@ router.get('/countries/search', CountriesController.getCountriesByName); // GET 
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Country'
- *             example: { "id": 1, "name": "England", "code": "ENG", "flag": "url/to/flag.png" }
+ *             example:
+ *               id: 1
+ *               name: "England"
+ *               code: "ENG"
+ *               flag: "url/to/flag.png"
+ *       400:
+ *         description: Invalid country ID supplied
  *       404:
  *         description: Country not found
  *       500:
@@ -150,7 +221,11 @@ router.get('/countries/:id', CountriesController.getCountryById);      // GET /a
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Country'
- *             example: { "id": 123, "name": "England", "code": "ENG", "flag": "https://example.com/flags/eng.png" }
+ *             example:
+ *               id: 123
+ *               name: "England"
+ *               code: "ENG"
+ *               flag: "https://example.com/flags/eng.png"
  *       400:
  *         description: Bad Request (invalid input)
  *       500:
@@ -180,7 +255,9 @@ router.post('/countries', CountriesController.createCountry);          // POST /
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Country'
- *           example: { "name": "England", "code": "ENG" }
+ *           example:
+ *             name: "England"
+ *             code: "ENG"
  *     responses:
  *       200:
  *         description: Country updated successfully
@@ -189,7 +266,7 @@ router.post('/countries', CountriesController.createCountry);          // POST /
  *             schema:
  *               $ref: '#/components/schemas/Country'
  *       400:
- *         description: Bad Request (invalid input)
+ *         description: Invalid country ID supplied or bad request payload
  *       404:
  *         description: Country not found
  *       500:
@@ -215,6 +292,8 @@ router.put('/countries/:id', CountriesController.updateCountry);       // PUT /a
  *     responses:
  *       200:
  *         description: Country deleted successfully
+ *       400:
+ *         description: Invalid country ID supplied
  *       404:
  *         description: Country not found
  *       500:

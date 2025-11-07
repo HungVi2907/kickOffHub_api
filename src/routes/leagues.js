@@ -76,7 +76,13 @@ router.get('/leagues', LeaguesController.getAllLeagues);          // GET /api/le
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/League'
- *             example: { "id": 1, "name": "Premier League", "type": "league", "logo": "https://.../pl.png" }
+ *             example:
+ *               id: 1
+ *               name: "Premier League"
+ *               type: "league"
+ *               logo: "https://.../pl.png"
+ *       400:
+ *         description: Invalid league ID supplied
  *       404:
  *         description: League not found
  *       500:
@@ -99,6 +105,9 @@ router.get('/leagues/:id', LeaguesController.getLeagueById);      // GET /api/le
  *           schema:
  *             type: object
  *             properties:
+ *               id:
+ *                 type: integer
+ *                 format: int32
  *               name:
  *                 type: string
  *               type:
@@ -106,8 +115,10 @@ router.get('/leagues/:id', LeaguesController.getLeagueById);      // GET /api/le
  *               logo:
  *                 type: string
  *             required:
+ *               - id
  *               - name
  *           example:
+ *             id: 39
  *             name: "Premier League"
  *             type: "league"
  *             logo: "https://example.com/logo.png"
@@ -147,7 +158,9 @@ router.post('/leagues', LeaguesController.createLeague);          // POST /api/l
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/League'
- *           example: { "name": "Premier League", "logo": "https://example.com/logo.png" }
+ *           example:
+ *             name: "Premier League"
+ *             logo: "https://example.com/logo.png"
  *     responses:
  *       200:
  *         description: League updated successfully
@@ -156,7 +169,7 @@ router.post('/leagues', LeaguesController.createLeague);          // POST /api/l
  *             schema:
  *               $ref: '#/components/schemas/League'
  *       400:
- *         description: Bad Request (invalid input)
+ *         description: Invalid league ID supplied or request payload invalid
  *       404:
  *         description: League not found
  *       500:
@@ -182,6 +195,8 @@ router.put('/leagues/:id', LeaguesController.updateLeague);       // PUT /api/le
  *     responses:
  *       200:
  *         description: League deleted successfully
+ *       400:
+ *         description: Invalid league ID supplied
  *       404:
  *         description: League not found
  *       500:

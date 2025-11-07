@@ -16,7 +16,11 @@ class UserController {
   static async getUserById(req, res) {
     try {
       const { id } = req.params;
-      const user = await User.findByPk(id);
+      const userId = Number.parseInt(id, 10);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return res.status(400).json({ error: 'ID user không hợp lệ' });
+      }
+      const user = await User.findByPk(userId);
       if (!user) {
         return res.status(404).json({ error: 'User không tồn tại' });
       }
@@ -44,18 +48,22 @@ class UserController {
   static async updateUser(req, res) {
     try {
       const { id } = req.params;
+      const userId = Number.parseInt(id, 10);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return res.status(400).json({ error: 'ID user không hợp lệ' });
+      }
       const { name, email } = req.body;
       if (!name || !email) {
         return res.status(400).json({ error: 'Tên và email là bắt buộc' });
       }
       const [affectedRows] = await User.update(
         { name, email },
-        { where: { id } }
+        { where: { id: userId } }
       );
       if (affectedRows === 0) {
         return res.status(404).json({ error: 'User không tồn tại' });
       }
-      res.json({ id, name, email });
+      res.json({ id: userId, name, email });
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi cập nhật user' });
     }
@@ -65,7 +73,11 @@ class UserController {
   static async deleteUser(req, res) {
     try {
       const { id } = req.params;
-      const deleted = await User.destroy({ where: { id } });
+      const userId = Number.parseInt(id, 10);
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return res.status(400).json({ error: 'ID user không hợp lệ' });
+      }
+      const deleted = await User.destroy({ where: { id: userId } });
       if (deleted === 0) {
         return res.status(404).json({ error: 'User không tồn tại' });
       }

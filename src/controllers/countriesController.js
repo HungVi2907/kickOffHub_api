@@ -7,8 +7,53 @@ class CountriesController {
   // Lấy danh sách tất cả countries
   static async getAllCountries(req, res) {
     try {
-      const countries = await Country.findAll();
-      res.json(countries);
+      const { page, limit } = req.query;
+
+      const parsePositiveIntOrDefault = (value, defaultValue) => {
+        if (value === undefined || value === null) {
+          return defaultValue;
+        }
+        const trimmed = String(value).trim();
+        if (trimmed === '') {
+          return defaultValue;
+        }
+        const parsed = Number.parseInt(trimmed, 10);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+          return null;
+        }
+        return parsed;
+      };
+
+      const pageNumber = parsePositiveIntOrDefault(page, 1);
+      if (pageNumber === null) {
+        return res.status(400).json({ error: 'Giá trị page phải là số nguyên dương' });
+      }
+
+      const limitNumber = parsePositiveIntOrDefault(limit, 20);
+      if (limitNumber === null) {
+        return res.status(400).json({ error: 'Giá trị limit phải là số nguyên dương' });
+      }
+
+      const offset = (pageNumber - 1) * limitNumber;
+
+      const { rows, count } = await Country.findAndCountAll({
+        attributes: ['id', 'name', 'code', 'flag'],
+        order: [['name', 'ASC']],
+        limit: limitNumber,
+        offset
+      });
+
+      const totalPages = Math.ceil(count / limitNumber);
+
+      res.json({
+        data: rows,
+        pagination: {
+          totalItems: count,
+          totalPages,
+          page: pageNumber,
+          limit: limitNumber
+        }
+      });
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi lấy danh sách countries' });
     }
@@ -28,6 +73,7 @@ class CountriesController {
       }
 
       const countries = await Country.findAll({
+        attributes: ['id', 'name', 'code', 'flag'],
         where: where(fn('LOWER', col('name')), {
           [Op.like]: `%${searchTerm}%`
         })
@@ -43,7 +89,14 @@ class CountriesController {
   static async getCountryById(req, res) {
     try {
       const { id } = req.params;
-      const country = await Country.findByPk(id);
+      const countryId = Number.parseInt(id, 10);
+      if (!Number.isInteger(countryId) || countryId <= 0) {
+        return res.status(400).json({ error: 'ID country không hợp lệ' });
+      }
+
+      const country = await Country.findByPk(countryId, {
+        attributes: ['id', 'name', 'code', 'flag']
+      });
       if (!country) {
         return res.status(404).json({ error: 'Country không tồn tại' });
       }
@@ -71,18 +124,22 @@ class CountriesController {
   static async updateCountry(req, res) {
     try {
       const { id } = req.params;
+      const countryId = Number.parseInt(id, 10);
+      if (!Number.isInteger(countryId) || countryId <= 0) {
+        return res.status(400).json({ error: 'ID country không hợp lệ' });
+      }
       const { name, code, flag } = req.body;
       if (!name) {
         return res.status(400).json({ error: 'Tên là bắt buộc' });
       }
       const [updated] = await Country.update(
         { name, code, flag },
-        { where: { id } }
+        { where: { id: countryId } }
       );
       if (updated === 0) {
         return res.status(404).json({ error: 'Country không tồn tại' });
       }
-      const country = await Country.findByPk(id);
+      const country = await Country.findByPk(countryId);
       res.json(country);
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi cập nhật country' });
@@ -93,7 +150,12 @@ class CountriesController {
   static async deleteCountry(req, res) {
     try {
       const { id } = req.params;
-      const deleted = await Country.destroy({ where: { id } });
+      const countryId = Number.parseInt(id, 10);
+      if (!Number.isInteger(countryId) || countryId <= 0) {
+        return res.status(400).json({ error: 'ID country không hợp lệ' });
+      }
+
+      const deleted = await Country.destroy({ where: { id: countryId } });
       if (deleted === 0) {
         return res.status(404).json({ error: 'Country không tồn tại' });
       }
