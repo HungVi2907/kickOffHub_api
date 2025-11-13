@@ -1,0 +1,21 @@
+[33m4c5aa93[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m 15th commit - update api doc, routes and parameters position
+[33m4a3fc30[m 14th commit - feat(database): add leagues_teams_season and season tables
+[33m915bb07[m update files
+[33m5a30d70[m continue 13th commit - update about swagger(add 1 server in swagger set up
+[33m96f325d[m continue 13th commit
+[33maad10a0[m 13th commit - update apidoc using swagger.
+[33mc2a8bcf[m 12th commit - add Sequelize to project dependencies
+[33m06fce33[m 11th continue
+[33m5064420[m 11th continue
+[33m2f2c0e5[m 11th commit - update readme
+[33m68b597a[m 10th commit - update ignore
+[33m2af845a[m 9th commit - change core architechure , connect to cloud database (TiDB)
+[33m9924a29[m update syncVenuesFromApi, helper. datamaer
+[33m549b235[m adjust the structure following new database design
+[33m25a5413[m delete useless fiels
+[33mac3bc38[m add document folder
+[33m61679f5[m add project backend report with structure and data flow
+[33m7487570[m Add programs to get data of leagues and countries
+[33m3d230e0[m test api-football - oke
+[33mff1a617[m 2nd commit - add delete player function
+[33me6a4ab4[m 1st commit - commit all back end basic files

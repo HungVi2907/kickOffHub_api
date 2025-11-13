@@ -19,18 +19,28 @@ const app = express();
 
 // Allow frontend domains to call the API
 const allowedOrigins = [
-  'http://localhost:5173',
   'https://kick-off-hub-frontend.vercel.app',
+  'http://localhost:5173',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
+const allowedOriginPatterns = [
+  /^https:\/\/kick-off-hub-frontend(?:-[\da-z-]+)?\.vercel\.app$/i,
+];
+
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
       callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+      return;
     }
+
+    if (allowedOrigins.includes(origin) || allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Not allowed by CORS'));
   },
 }));
 
