@@ -2,27 +2,27 @@ import { Op, fn, col, where } from 'sequelize';
 import Country from '../models/Country.js';
 import { fetchCountries } from '../utils/fetchApiFootball.js';
 
+const parsePositiveIntOrDefault = (value, defaultValue) => {
+	if (value === undefined || value === null) {
+		return defaultValue;
+	}
+	const trimmed = String(value).trim();
+	if (trimmed === '') {
+		return defaultValue;
+	}
+	const parsed = Number.parseInt(trimmed, 10);
+	if (!Number.isInteger(parsed) || parsed < 1) {
+		return null;
+	}
+	return parsed;
+};
+
 // Controller cho Countries
 class CountriesController {
   // Lấy danh sách tất cả countries
   static async getAllCountries(req, res) {
     try {
       const { page, limit } = req.query;
-
-      const parsePositiveIntOrDefault = (value, defaultValue) => {
-        if (value === undefined || value === null) {
-          return defaultValue;
-        }
-        const trimmed = String(value).trim();
-        if (trimmed === '') {
-          return defaultValue;
-        }
-        const parsed = Number.parseInt(trimmed, 10);
-        if (!Number.isInteger(parsed) || parsed < 1) {
-          return null;
-        }
-        return parsed;
-      };
 
       const pageNumber = parsePositiveIntOrDefault(page, 1);
       if (pageNumber === null) {
@@ -62,28 +62,49 @@ class CountriesController {
   // Tìm kiếm countries theo tên (hỗ trợ tìm một phần)
   static async getCountriesByName(req, res) {
     try {
-      const { name } = req.query;
-      if (!name) {
+      // 1. Validate và chuẩn hóa keyword
+      const keywordRaw = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+      if (!keywordRaw) {
         return res.status(400).json({ error: 'Tên country là bắt buộc' });
       }
 
-      const searchTerm = name.trim().toLowerCase();
-      if (!searchTerm) {
-        return res.status(400).json({ error: 'Tên country không được để trống' });
+      // 2. Validate limit (nếu có)
+      const limitValue = parsePositiveIntOrDefault(req.query.limit, 20);
+      if (limitValue === null || limitValue > 100) {
+        return res.status(400).json({ error: 'Giá trị limit phải nằm trong khoảng 1-100' });
       }
 
+      // 3. Chuyển lowercase + escape ký tự LIKE
+      const keywordLower = keywordRaw.toLowerCase();
+      const escapedKeyword = keywordLower.replace(/[%_]/g, '\\$&');
+      const likePattern = `%${escapedKeyword}%`;
+
+      // 4. Query
       const countries = await Country.findAll({
         attributes: ['id', 'name', 'code', 'flag'],
-        where: where(fn('LOWER', col('name')), {
-          [Op.like]: `%${searchTerm}%`
-        })
+        where: where(
+          fn('LOWER', col('name')),
+          {
+            [Op.like]: likePattern
+          }
+        ),
+        order: [['name', 'ASC']],
+        limit: limitValue
       });
 
-      res.json(countries);
+      // 5. Trả về dạng chuẩn
+      return res.json({
+        results: countries,
+        total: countries.length,
+        limit: limitValue,
+        keyword: keywordRaw
+      });
+
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi tìm kiếm country theo tên' });
+      return res.status(500).json({ error: 'Lỗi khi tìm kiếm country theo tên' });
     }
   }
+
 
   // Lấy thông tin một country theo ID
   static async getCountryById(req, res) {

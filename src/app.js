@@ -8,6 +8,8 @@ import teamsRoutes from './routes/teams.js';
 import venuesRoutes from './routes/venues.js';
 import seasonsRoutes from './routes/seasons.js';
 import leagueTeamSeasonRoutes from './routes/leagueTeamSeason.js';
+import playersRoutes from './routes/players.js';
+import playerTeamLeagueSeasonRoutes from './routes/playerTeamLeagueSeason.js';
 
 // Swagger
 import swaggerJSDoc from 'swagger-jsdoc';
@@ -75,6 +77,8 @@ app.use('/api', teamsRoutes);
 app.use('/api', venuesRoutes);
 app.use('/api', seasonsRoutes);
 app.use('/api', leagueTeamSeasonRoutes);
+app.use('/api', playersRoutes);
+app.use('/api', playerTeamLeagueSeasonRoutes);
 
 // Route mặc định
 app.get('/', (req, res) => {

@@ -79,3 +79,30 @@ CREATE TABLE `countries` (
    PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,
    UNIQUE KEY `email` (`email`)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30001
+
+ -- table players
+ CREATE TABLE `players` (
+   `id` int(11) NOT NULL,
+   `name` varchar(255) DEFAULT NULL,
+   `firstname` varchar(255) DEFAULT NULL,
+   `lastname` varchar(255) DEFAULT NULL,
+   `age` int(11) DEFAULT NULL,
+   `birth_date` date DEFAULT NULL,
+   `birth_place` varchar(255) DEFAULT NULL,
+   `birth_country` varchar(255) DEFAULT NULL,
+   `nationality` varchar(255) DEFAULT NULL,
+   `height` varchar(20) DEFAULT NULL,
+   `weight` varchar(20) DEFAULT NULL,
+   `number` int(11) DEFAULT NULL,
+   `position` varchar(100) DEFAULT NULL,
+   `photo` varchar(1024) DEFAULT NULL,
+   PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+
+ -- table players_teams_league_season
+ CREATE TABLE `players_teams_league_season` (
+   `player_id` int(11) DEFAULT NULL,
+   `league_id` int(11) DEFAULT NULL,
+   `team_id` int(11) DEFAULT NULL,
+   `season` int(11) DEFAULT NULL
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
