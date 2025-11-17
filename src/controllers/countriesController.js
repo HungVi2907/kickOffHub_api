@@ -1,6 +1,5 @@
 import { Op, fn, col, where } from 'sequelize';
 import Country from '../models/Country.js';
-import { fetchCountries } from '../utils/fetchApiFootball.js';
 
 const parsePositiveIntOrDefault = (value, defaultValue) => {
 	if (value === undefined || value === null) {

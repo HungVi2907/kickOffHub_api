@@ -21,11 +21,13 @@ const app = express();
 const allowedOrigins = [
   'https://kick-off-hub-frontend.vercel.app',
   'http://localhost:5173',
-  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL,   
 ].filter(Boolean);
 
 const allowedOriginPatterns = [
   /^https:\/\/kick-off-hub-frontend(?:-[\da-z-]+)?\.vercel\.app$/i,
+  /^http:\/\/localhost:\d+$/i,
+  /^http:\/\/127\.0\.0\.1:\d+$/
 ];
 
 app.use(cors({

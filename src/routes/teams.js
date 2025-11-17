@@ -509,4 +509,46 @@ router.put('/teams/:id', teamsController.updateTeam);       // PUT /api/teams/:i
  */
 router.delete('/teams/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
 
+/**
+ * @openapi
+ * /api/teams/import:
+ *   post:
+ *     summary: Import teams from API-Football
+ *     description: Gọi API-Football để lấy danh sách đội bóng theo league và season, sau đó lưu vào bảng teams và leagues_teams_season.
+ *     tags:
+ *       - Teams
+ *     parameters:
+ *       - in: query
+ *         name: season
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Mùa giải (ví dụ 2023).
+ *       - in: query
+ *         name: league
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: ID giải đấu trong API-Football.
+ *     responses:
+ *       200:
+ *         description: Kết quả nhập dữ liệu đội bóng.
+ *         content:
+ *           application/json:
+ *             example:
+ *               imported: 20
+ *               mappingsInserted: 20
+ *               mappingErrors: []
+ *               season: 2023
+ *               league: 39
+ *               totalPages: 2
+ *       400:
+ *         description: Thiếu hoặc sai định dạng tham số season hoặc league.
+ *       500:
+ *         description: Lỗi hệ thống hoặc lỗi từ API-Football.
+ */
+router.post('/teams/import', teamsController.importTeamsFromApiFootball); // POST /api/teams/import
+
 export default router;

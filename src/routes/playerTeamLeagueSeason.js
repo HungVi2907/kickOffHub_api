@@ -54,6 +54,40 @@ const router = express.Router();
 
 /**
  * @openapi
+ * /api/player-team-league-season:
+ *   post:
+ *     summary: Tạo bản ghi cầu thủ-đội-giải-mùa
+ *     description: Thêm hoặc cập nhật (upsert) mối quan hệ cầu thủ - đội - giải - mùa. Nếu bản ghi đã tồn tại, dữ liệu sẽ được cập nhật.
+ *     tags:
+ *       - Player-Team-League-Season
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PlayerTeamLeagueSeason'
+ *           example:
+ *             playerId: 394
+ *             leagueId: 39
+ *             teamId: 33
+ *             season: 2024
+ *     responses:
+ *       201:
+ *         description: Tạo hoặc cập nhật thành công bản ghi.
+ *         content:
+ *           application/json:
+ *             $ref: '#/components/schemas/PlayerTeamLeagueSeason'
+ *       400:
+ *         description: Dữ liệu không hợp lệ.
+ *       409:
+ *         description: Tham chiếu ngoại không tồn tại.
+ *       500:
+ *         description: Lỗi hệ thống.
+ */
+router.post('/player-team-league-season', playerTeamLeagueSeasonController.createMapping);
+
+/**
+ * @openapi
  * /api/player-team-league-season/players:
  *   get:
  *     summary: Danh sách cầu thủ của một đội trong một giải và mùa cụ thể

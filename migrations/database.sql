@@ -81,7 +81,7 @@ CREATE TABLE `countries` (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin AUTO_INCREMENT=30001
 
  -- table players
- CREATE TABLE `players` (
+CREATE TABLE `players` (
    `id` int(11) NOT NULL,
    `name` varchar(255) DEFAULT NULL,
    `firstname` varchar(255) DEFAULT NULL,
@@ -96,6 +96,7 @@ CREATE TABLE `countries` (
    `number` int(11) DEFAULT NULL,
    `position` varchar(100) DEFAULT NULL,
    `photo` varchar(1024) DEFAULT NULL,
+   `isPopular` tinyint(1) NOT NULL DEFAULT '0',
    PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 

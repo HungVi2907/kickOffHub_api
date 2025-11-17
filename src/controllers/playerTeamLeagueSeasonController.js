@@ -75,7 +75,44 @@ const handleValidationError = (error, res) => {
 	}
 	return res.status(400).json({ error: 'Dữ liệu không hợp lệ' });
 };
+
+const persistMapping = async (payload) => {
+	try {
+		await PlayerTeamLeagueSeason.upsert(payload);
+		return payload;
+	} catch (error) {
+		if (error?.name === 'SequelizeForeignKeyConstraintError') {
+			const wrapped = new Error('FOREIGN_KEY_VIOLATION');
+			wrapped.cause = error;
+			throw wrapped;
+		}
+		throw error;
+	}
+};
+
 const PlayerTeamLeagueSeasonController = {
+	async createMapping(req, res) {
+		try {
+			const payload = buildPayload(req.body);
+			await persistMapping(payload);
+			return res.status(201).json(payload);
+		} catch (error) {
+			if (error instanceof Error && (error.message.startsWith('MISSING_') || error.message.startsWith('INVALID_'))) {
+				return handleValidationError(error, res);
+			}
+			if (error?.message === 'FOREIGN_KEY_VIOLATION') {
+				return res.status(409).json({ error: 'playerId hoặc teamId hoặc leagueId không tồn tại trong hệ thống' });
+			}
+			return res.status(500).json({ error: 'Lỗi khi tạo bản ghi cầu thủ-đội-giải-mùa' });
+		}
+	},
+
+	async createMappingRecord(data) {
+		const payload = buildPayload(data);
+		await persistMapping(payload);
+		return payload;
+	},
+
 	async updateMapping(req, res) {
 		try {
 			let identifiers;

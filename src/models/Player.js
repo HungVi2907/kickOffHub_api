@@ -61,6 +61,12 @@ const Player = sequelize.define('Player', {
 		type: DataTypes.STRING(1024),
 		allowNull: true
 	}
+	,isPopular: {
+		type: DataTypes.BOOLEAN,
+		allowNull: false,
+		defaultValue: false,
+		field: 'isPopular'
+	}
 }, {
 	tableName: 'players',
 	underscored: true,

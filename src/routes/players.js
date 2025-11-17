@@ -153,6 +153,91 @@ router.get('/players', playersController.getAllPlayers);
 
 /**
  * @openapi
+ * /api/players/popular:
+ *   get:
+ *     summary: Get popular players (paginated)
+ *     description: |
+ *       Returns a paginated list of players marked as "popular" in the database.
+ *       This endpoint uses standard HTTP status codes for success and error handling.
+ *       
+ *       Best practices followed:
+ *         - Clear, explicit errors for invalid input (400).
+ *         - Use pagination to avoid large responses.
+ *         - Examples provided for request and response shapes.
+ *     tags:
+ *       - Players
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number (starts at 1). Use this to navigate results.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of players per page. Max allowed is 100.
+ *     responses:
+ *       200:
+ *         description: A paginated list of popular players.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Player'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *             example:
+ *               data:
+ *                 - id: 394
+ *                   name: "Lionel Andrés Messi"
+ *                   position: "Forward"
+ *                   number: 10
+ *                   nationality: "Argentina"
+ *               pagination:
+ *                 totalItems: 12
+ *                 totalPages: 1
+ *                 page: 1
+ *                 limit: 20
+ *       400:
+ *         description: Invalid query parameters (for example, page <= 0 or limit out of range).
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Invalid pagination parameters: page must be a positive integer"
+ *       500:
+ *         description: Internal server error while fetching popular players.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Internal server error when fetching popular players"
+ *     x-request-examples:
+ *       - name: Example request
+ *         value: "/api/players/popular?page=1&limit=20"
+ */
+
+router.get('/players/popular', playersController.getPopularPlayers);
+
+/**
+ * @openapi
  * /api/players/search:
  *   get:
  *     summary: Tìm cầu thủ theo tên hiển thị
@@ -487,5 +572,69 @@ router.delete('/players/:id', playersController.deletePlayer);
 router.get('/players-stats', playersController.getPlayerStatsWithFilters);
 
 
-
+/**
+ * @openapi
+ * /api/players/import:
+ *   post:
+ *     summary: Nhập dữ liệu cầu thủ từ API Football
+ *     description: Gọi API Football để tải danh sách cầu thủ theo trang và lưu/upsert vào cơ sở dữ liệu `players`.
+ *     tags:
+ *       - Players
+ *     parameters:
+ *       - in: query
+ *         name: season
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Mùa giải cần import (ví dụ 2021).
+ *       - in: query
+ *         name: league
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: ID giải đấu trong API Football (ví dụ 39 = Premier League).
+ *       - in: query
+ *         name: team
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: ID đội bóng trong API Football.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Trang dữ liệu cần tải.
+ *     responses:
+ *       200:
+ *         description: Số lượng cầu thủ được nhập thành công trong trang yêu cầu.
+ *         content:
+ *           application/json:
+ *             example:
+ *               imported: 20
+ *               mappingsInserted: 20
+ *               mappingErrors: []
+ *               season: 2021
+ *               league: 39
+ *               team: 33
+ *               page: 1
+ *               totalPages: 40
+ *       400:
+ *         description: Thiếu hoặc sai định dạng query `season`, `league` hoặc `page`.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "page phải là số nguyên dương"
+ *       500:
+ *         description: Lỗi hệ thống khi gọi API hoặc lưu dữ liệu.
+ *         content:
+ *           application/json:
+ *             example:
+ *               error: "Lỗi khi import cầu thủ từ API Football"
+ */
+router.post('/players/import', playersController.importPlayersFromApiFootball);
 export default router;

@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import axios from 'axios';
 import Player from '../models/Player.js';
 import sequelize from '../config/database.js';
+import playerTeamLeagueSeasonController from './playerTeamLeagueSeasonController.js';
 
 const parsePositiveIntOrDefault = (value, defaultValue) => {
 	if (value === undefined || value === null) {
@@ -75,6 +76,14 @@ const parseOptionalIntegerField = (value, fieldName) => {
 		throw new Error(`INVALID_INTEGER_${fieldName}`);
 	}
 	return parsed;
+};
+
+const parseApiInteger = (value) => {
+	if (value === undefined || value === null || String(value).trim() === '') {
+		return null;
+	}
+	const parsed = Number.parseInt(String(value).trim(), 10);
+	return Number.isInteger(parsed) ? parsed : null;
 };
 
 const buildPayload = (body) => {
@@ -289,6 +298,215 @@ const PlayersController = {
 			return res.status(204).send();
 		} catch (error) {
 			return res.status(500).json({ error: 'Lỗi khi xóa cầu thủ' });
+		}
+	},
+
+	async getPopularPlayers(req, res) {
+		try {
+			const pageNumber = parsePositiveIntOrDefault(req.query.page, 1);
+			if (pageNumber === null) {
+				return res.status(400).json({ error: 'Giá trị page phải là số nguyên dương' });
+			}
+
+			const limitNumber = parsePositiveIntOrDefault(req.query.limit, 20);
+			if (limitNumber === null) {
+				return res.status(400).json({ error: 'Giá trị limit phải là số nguyên dương' });
+			}
+
+			if (limitNumber > 100) {
+				return res.status(400).json({ error: 'Giá trị limit không được vượt quá 100' });
+			}
+
+			const offset = (pageNumber - 1) * limitNumber;
+
+			const { rows, count } = await Player.findAndCountAll({
+				attributes: [
+					'id',
+					'name',
+					'firstname',
+					'lastname',
+					'age',
+					'birth_date',
+					'birth_place',
+					'birth_country',
+					'nationality',
+					'height',
+					'weight',
+					'number',
+					'position',
+					'photo'
+				],
+				where: { isPopular: true },
+				order: [['name', 'ASC']],
+				limit: limitNumber,
+				offset
+			});
+
+			return res.json({
+				data: rows,
+				pagination: {
+					totalItems: count,
+					totalPages: Math.ceil(count / limitNumber),
+					page: pageNumber,
+					limit: limitNumber
+				}
+			});
+		} catch (error) {
+			return res.status(500).json({ error: 'Lỗi khi lấy danh sách cầu thủ phổ biến' });
+		}
+	},
+
+	async importPlayersFromApiFootball(req, res) {
+		try {
+			const seasonValue = parsePositiveIntOrDefault(req.query.season, undefined);
+			if (seasonValue === undefined) {
+				return res.status(400).json({ error: 'season là bắt buộc' });
+			}
+			if (seasonValue === null) {
+				return res.status(400).json({ error: 'season phải là số nguyên dương' });
+			}
+
+			const leagueValue = parsePositiveIntOrDefault(req.query.league, undefined);
+			if (leagueValue === undefined) {
+				return res.status(400).json({ error: 'league là bắt buộc' });
+			}
+			if (leagueValue === null) {
+				return res.status(400).json({ error: 'league phải là số nguyên dương' });
+			}
+
+			const teamValue = parsePositiveIntOrDefault(req.query.team, undefined);
+			if (teamValue === undefined) {
+				return res.status(400).json({ error: 'team là bắt buộc' });
+			}
+			if (teamValue === null) {
+				return res.status(400).json({ error: 'team phải là số nguyên dương' });
+			}
+
+			const pageNumber = parsePositiveIntOrDefault(req.query.page, 1);
+			if (pageNumber === null) {
+				return res.status(400).json({ error: 'page phải là số nguyên dương' });
+			}
+
+			const apiParams = { season: seasonValue, league: leagueValue, page: pageNumber };
+			if (teamValue !== undefined) {
+				apiParams.team = teamValue;
+			}
+
+			const response = await axios.get('https://v3.football.api-sports.io/players', {
+				params: apiParams,
+				headers: {
+					'x-apisports-key': process.env.API_FOOTBALL_KEY,
+					'x-rapidapi-host': 'v3.football.api-sports.io'
+				}
+			});
+
+			const apiPlayers = Array.isArray(response.data.response) ? response.data.response : [];
+			if (apiPlayers.length === 0) {
+				return res.status(200).json({ imported: 0, message: 'Không có cầu thủ nào được tìm thấy' });
+			}
+
+			const playerEntries = apiPlayers
+				.map((item) => {
+					const player = item?.player;
+					if (!player || !Number.isInteger(player.id)) {
+						return null;
+					}
+					const stats = Array.isArray(item?.statistics) && item.statistics.length > 0 ? item.statistics[0] : null;
+					const inferredTeamIdFromStats = parseApiInteger(stats?.team?.id);
+					const resolvedTeamId = teamValue !== undefined ? teamValue : inferredTeamIdFromStats;
+
+					const playerPayload = {
+						id: player.id,
+						name: normalizeStringField(player.name) ?? null,
+						firstname: normalizeStringField(player.firstname) ?? null,
+						lastname: normalizeStringField(player.lastname) ?? null,
+						age: parseApiInteger(player.age),
+						birth_date: player.birth?.date || null,
+						birth_place: normalizeStringField(player.birth?.place) ?? null,
+						birth_country: normalizeStringField(player.birth?.country) ?? null,
+						nationality: normalizeStringField(player.nationality) ?? null,
+						height: normalizeStringField(player.height) ?? null,
+						weight: normalizeStringField(player.weight) ?? null,
+						number: parseApiInteger(player.number ?? stats?.games?.number),
+						position: normalizeStringField(player.position ?? stats?.games?.position) ?? null,
+						photo: normalizeStringField(player.photo) ?? null
+					};
+
+					const mappingPayload = resolvedTeamId
+						? {
+							playerId: player.id,
+							leagueId: leagueValue,
+							teamId: resolvedTeamId,
+							season: seasonValue
+						}
+						: null;
+
+					return {
+						playerPayload,
+						mappingPayload
+					};
+				})
+				.filter((entry) => entry && entry.playerPayload.name);
+
+			if (playerEntries.length === 0) {
+				return res.status(200).json({ imported: 0, message: 'Không có cầu thủ hợp lệ để lưu' });
+			}
+
+			const playerPayloads = playerEntries.map((entry) => entry.playerPayload);
+			const mappingPayloads = playerEntries
+				.map((entry) => entry.mappingPayload)
+				.filter((payload) => payload !== null);
+
+			await Player.bulkCreate(playerPayloads, {
+				updateOnDuplicate: [
+					'name',
+					'firstname',
+					'lastname',
+					'age',
+					'birth_date',
+					'birth_place',
+					'birth_country',
+					'nationality',
+					'height',
+					'weight',
+					'number',
+					'position',
+					'photo'
+				]
+			});
+
+			let createdMappings = 0;
+			const mappingErrors = [];
+			for (const mappingPayload of mappingPayloads) {
+				try {
+					await playerTeamLeagueSeasonController.createMappingRecord(mappingPayload);
+					createdMappings += 1;
+				} catch (error) {
+					mappingErrors.push({
+						playerId: mappingPayload.playerId,
+						reason: error?.message || 'Không xác định'
+					});
+				}
+			}
+
+			return res.status(200).json({
+				imported: playerPayloads.length,
+				mappingsInserted: createdMappings,
+				mappingErrors,
+				page: pageNumber,
+				totalPages: response.data.paging?.total || null,
+				season: seasonValue,
+				league: leagueValue,
+				team: teamValue ?? null
+			});
+		} catch (error) {
+			if (error.response && error.response.data) {
+				return res.status(error.response.status || 500).json({
+					error: 'Lỗi từ API Football',
+					details: error.response.data
+				});
+			}
+			return res.status(500).json({ error: 'Lỗi khi import cầu thủ từ API Football', details: error.message });
 		}
 	},
 
