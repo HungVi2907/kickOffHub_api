@@ -1,3 +1,6 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { matchedData } from 'express-validator';
 import User from '../models/User.js';
 
 // Controller cho User
@@ -84,6 +87,43 @@ class UserController {
       res.json({ message: 'User đã được xóa thành công' });
     } catch (error) {
       res.status(500).json({ error: 'Lỗi khi xóa user' });
+    }
+  }
+  // Đăng ký
+  static async register(req, res) {
+    try {
+      const { name, email, password } = matchedData(req, { locations: ['body'] });
+      if (!name || !email || !password) return res.status(400).json({ error: 'Thiếu name/email/password' });
+
+      const existing = await User.findOne({ where: { email } });
+      if (existing) return res.status(409).json({ error: 'Email đã được sử dụng' });
+
+      const user = await User.create({ name, email, password });
+      // thanks to defaultScope/toJSON, response không chứa password
+      res.status(201).json({ user });
+    } catch (err) {
+      res.status(500).json({ error: 'Lỗi khi đăng ký', details: err.message });
+    }
+  }
+
+  // Đăng nhập
+  static async login(req, res) {
+    try {
+      const { email, password } = matchedData(req, { locations: ['body'] });
+      if (!email || !password) return res.status(400).json({ error: 'Thiếu email/password' });
+
+      const user = await User.scope(null).findOne({ where: { email } }); // scope(null) để lấy password
+      if (!user) return res.status(401).json({ error: 'Sai email hoặc mật khẩu' });
+
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) return res.status(401).json({ error: 'Sai email hoặc mật khẩu' });
+
+      const payload = { id: user.id, email: user.email };
+      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1h' });
+
+      res.json({ token, user: user.toJSON() });
+    } catch (err) {
+      res.status(500).json({ error: 'Lỗi khi đăng nhập', details: err.message });
     }
   }
 }

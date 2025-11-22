@@ -4,10 +4,17 @@ import 'dotenv/config';
 
 // Chuẩn bị cấu hình SSL nếu TiDB yêu cầu chứng chỉ
 const dialectOptions = {};
-if (process.env.DB_SSL_CA_PATH) {
-  dialectOptions.ssl = {
-    ca: fs.readFileSync(process.env.DB_SSL_CA_PATH, 'utf8')
-  };
+const caPath = process.env.DB_SSL_CA_PATH ? process.env.DB_SSL_CA_PATH.trim() : '';
+if (caPath) {
+  try {
+    dialectOptions.ssl = {
+      ca: fs.readFileSync(caPath, 'utf8'),
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2'
+    };
+  } catch (err) {
+    console.warn(`Không thể đọc file CA tại ${caPath}: ${err.message}`);
+  }
 }
 
 // Cấu hình Sequelize với MySQL

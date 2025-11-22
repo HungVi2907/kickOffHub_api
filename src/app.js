@@ -10,10 +10,13 @@ import seasonsRoutes from './routes/seasons.js';
 import leagueTeamSeasonRoutes from './routes/leagueTeamSeason.js';
 import playersRoutes from './routes/players.js';
 import playerTeamLeagueSeasonRoutes from './routes/playerTeamLeagueSeason.js';
-
+import authRoutes from './routes/auth.js';
+import postsRoutes from './routes/posts.js';
+import commentsRoutes from './routes/comments.js';
 // Swagger
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import './models/index.js';
 
 const app = express();
 
@@ -91,7 +94,9 @@ app.use('/api', seasonsRoutes);
 app.use('/api', leagueTeamSeasonRoutes);
 app.use('/api', playersRoutes);
 app.use('/api', playerTeamLeagueSeasonRoutes);
-
+app.use('/api', authRoutes);
+app.use('/api', postsRoutes);
+app.use('/api', commentsRoutes);
 // Route mặc định
 app.get('/', (req, res) => {
   res.send('Chào mừng đến với Kick Off Hub API');
