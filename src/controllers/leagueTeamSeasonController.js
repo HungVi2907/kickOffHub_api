@@ -1,23 +1,80 @@
+import { Op } from 'sequelize';
 import LeagueTeamSeason from '../models/LeagueTeamSeason.js';
 import Team from '../models/Team.js';
+
+const TEAM_ATTRIBUTES = ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id'];
+const LTS_ATTRIBUTES = ['leagueId', 'teamId', 'season', 'created_at', 'updated_at'];
+
+const createValidationError = (message) => {
+  const error = new Error(message);
+  error.isValidationError = true;
+  return error;
+};
+
+const parsePositiveInt = (value, fieldName) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw createValidationError(`${fieldName} is not a valid positive integer`);
+  }
+  return parsed;
+};
+
+const parseOptionalPositiveInt = (value, fieldName) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  const stringValue = String(value).trim();
+  if (stringValue === '') {
+    return undefined;
+  }
+  return parsePositiveInt(stringValue, fieldName);
+};
+
+const buildFilter = (query) => {
+  const filter = {};
+  const leagueId = parseOptionalPositiveInt(query.leagueId, 'leagueId');
+  const teamId = parseOptionalPositiveInt(query.teamId, 'teamId');
+  const season = parseOptionalPositiveInt(query.season, 'season');
+
+  if (leagueId !== undefined) {
+    filter.leagueId = leagueId;
+  }
+  if (teamId !== undefined) {
+    filter.teamId = teamId;
+  }
+  if (season !== undefined) {
+    filter.season = season;
+  }
+
+  return filter;
+};
 
 class LeagueTeamSeasonController {
   static async getAll(req, res) {
     try {
-      const records = await LeagueTeamSeason.findAll();
+      const filter = buildFilter(req.query);
+      const records = await LeagueTeamSeason.findAll({
+        where: filter,
+        attributes: LTS_ATTRIBUTES,
+        order: [
+          ['leagueId', 'ASC'],
+          ['season', 'DESC'],
+          ['teamId', 'ASC']
+        ]
+      });
       res.json(records);
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi lấy danh sách leagues_teams_season' });
+      if (error.isValidationError) {
+        return res.status(400).json({ error: 'Invalid query parameters' });
+      }
+      res.status(500).json({ error: 'Error retrieving league team season records' });
     }
   }
 
   static async getByLeagueAndSeason(req, res) {
     try {
-      const leagueId = Number(req.params.leagueId);
-      const season = Number(req.params.season);
-      if (!Number.isInteger(leagueId) || !Number.isInteger(season)) {
-        return res.status(400).json({ error: 'leagueId hoặc season không hợp lệ' });
-      }
+      const leagueId = parsePositiveInt(req.params.leagueId, 'leagueId');
+      const season = parsePositiveInt(req.params.season, 'season');
 
       const records = await LeagueTeamSeason.findAll({
         where: { leagueId, season },
@@ -29,37 +86,44 @@ class LeagueTeamSeasonController {
       }
 
       const teamIds = [...new Set(records.map((record) => record.teamId))];
+      if (teamIds.length === 0) {
+        return res.json([]);
+      }
+
       const teams = await Team.findAll({
-        where: { id: teamIds },
-        attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id']
+        where: { id: { [Op.in]: teamIds } },
+        attributes: TEAM_ATTRIBUTES,
+        order: [['name', 'ASC']]
       });
-      res.json(teams);
+      return res.json(teams);
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi lấy dữ liệu theo leagueId và season' });
+      if (error.isValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: 'Error retrieving data by leagueId and season' });
     }
   }
 
   static async deleteEntry(req, res) {
     try {
-      const leagueId = Number(req.params.leagueId);
-      const teamId = Number(req.params.teamId);
-      const season = Number(req.params.season);
-
-      if (!Number.isInteger(leagueId) || !Number.isInteger(teamId) || !Number.isInteger(season)) {
-        return res.status(400).json({ error: 'leagueId, teamId hoặc season không hợp lệ' });
-      }
+      const leagueId = parsePositiveInt(req.params.leagueId, 'leagueId');
+      const teamId = parsePositiveInt(req.params.teamId, 'teamId');
+      const season = parsePositiveInt(req.params.season, 'season');
 
       const deletedRows = await LeagueTeamSeason.destroy({
         where: { leagueId, teamId, season }
       });
 
       if (deletedRows === 0) {
-        return res.status(404).json({ error: 'Bản ghi không tồn tại' });
+        return res.status(404).json({ error: 'Record does not exist' });
       }
 
-      res.json({ message: 'Bản ghi đã được xóa thành công' });
+      res.json({ message: 'Record has been successfully deleted' });
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi xóa bản ghi' });
+      if (error.isValidationError) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: 'Error deleting record' });
     }
   }
 }

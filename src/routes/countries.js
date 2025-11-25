@@ -29,7 +29,7 @@ const router = express.Router();
  *         - name
  */
 
-// Routes for Countries (English documentation)
+// Routes for Countries
 
 /**
  * @openapi
@@ -38,6 +38,7 @@ const router = express.Router();
  *     summary: Get a list of all countries
  *     tags:
  *       - Countries
+ *     description: Returns a paginated list of country objects limited to id, name, code, and flag fields.
  *     parameters:
  *       - in: query
  *         name: page
@@ -55,7 +56,6 @@ const router = express.Router();
  *           minimum: 1
  *           default: 20
  *         description: Number of items per page
- *     description: Returns a paginated list of country objects limited to id, name, code, and flag fields.
  *     responses:
  *       200:
  *         description: Paginated list of countries
@@ -83,12 +83,16 @@ const router = express.Router();
  *                   properties:
  *                     totalItems:
  *                       type: integer
+ *                       format: int32
  *                     totalPages:
  *                       type: integer
+ *                       format: int32
  *                     page:
  *                       type: integer
+ *                       format: int32
  *                     limit:
  *                       type: integer
+ *                       format: int32
  *             example:
  *               data:
  *                 - id: 1
@@ -100,6 +104,17 @@ const router = express.Router();
  *                 totalPages: 9
  *                 page: 1
  *                 limit: 20
+ *       400:
+ *         description: Invalid page or limit value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *             example:
+ *               error: "Limit value must be a positive integer"
  *       500:
  *         description: Internal Server Error
  */
@@ -146,10 +161,28 @@ router.get('/countries', CountriesController.getAllCountries);          // GET /
  *                 flag: "url/to/flag.png"
  *       400:
  *         description: Missing or empty name query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *             example:
+ *               error: "Country name is required"
  *       500:
  *         description: Internal Server Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *             example:
+ *               error: "Error searching countries by name"
  */
-router.get('/countries/search', CountriesController.getCountriesByName); // GET /api/countries/search
+router.get('/countries/search', CountriesController.searchCountriesByName); // GET /api/countries/search
 
 /**
  * @openapi

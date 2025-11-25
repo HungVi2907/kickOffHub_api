@@ -1,6 +1,8 @@
 import { Op, fn, col, where } from 'sequelize';
 import Country from '../models/Country.js';
 
+const COUNTRY_ATTRIBUTES = ['id', 'name', 'code', 'flag'];
+
 const parsePositiveIntOrDefault = (value, defaultValue) => {
 	if (value === undefined || value === null) {
 		return defaultValue;
@@ -16,27 +18,32 @@ const parsePositiveIntOrDefault = (value, defaultValue) => {
 	return parsed;
 };
 
-// Controller cho Countries
+// Controller for Countries
 class CountriesController {
-  // Lấy danh sách tất cả countries
+  // Get list of all contries with pagination
   static async getAllCountries(req, res) {
     try {
       const { page, limit } = req.query;
 
+      // Validate page
       const pageNumber = parsePositiveIntOrDefault(page, 1);
       if (pageNumber === null) {
-        return res.status(400).json({ error: 'Giá trị page phải là số nguyên dương' });
+        return res.status(400).json({ error: 'Page value must be a positive integer' });
       }
 
+      // Validate limit
       const limitNumber = parsePositiveIntOrDefault(limit, 20);
       if (limitNumber === null) {
-        return res.status(400).json({ error: 'Giá trị limit phải là số nguyên dương' });
+        return res.status(400).json({ error: 'Limit value must be a positive integer' });
+      }
+      if (limitNumber > 100) {
+        return res.status(400).json({ error: 'Limit cannot exceed 100' });
       }
 
       const offset = (pageNumber - 1) * limitNumber;
 
       const { rows, count } = await Country.findAndCountAll({
-        attributes: ['id', 'name', 'code', 'flag'],
+        attributes: COUNTRY_ATTRIBUTES,
         order: [['name', 'ASC']],
         limit: limitNumber,
         offset
@@ -44,85 +51,111 @@ class CountriesController {
 
       const totalPages = Math.ceil(count / limitNumber);
 
-      res.json({
+      // Case: page > totalPages
+      if (totalPages !== 0 && pageNumber > totalPages) {
+        return res.status(400).json({ error: 'Page exceeds total pages' });
+      }
+
+      return res.json({
         data: rows,
         pagination: {
           totalItems: count,
           totalPages,
           page: pageNumber,
-          limit: limitNumber
+          limit: limitNumber,
+          hasNextPage: pageNumber < totalPages,
+          hasPrevPage: pageNumber > 1
         }
       });
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi lấy danh sách countries' });
+      console.error('Error retrieving countries list:', error);
+      return res.status(500).json({ error: 'Error retrieving countries list' });
     }
   }
 
-  // Tìm kiếm countries theo tên (hỗ trợ tìm một phần)
-  static async getCountriesByName(req, res) {
+
+  // Search countries by name (supports partial match)
+  static async searchCountriesByName(req, res) {
     try {
-      // 1. Validate và chuẩn hóa keyword
+      //  Validate và chuẩn hóa keyword
       const keywordRaw = typeof req.query.name === 'string' ? req.query.name.trim() : '';
       if (!keywordRaw) {
-        return res.status(400).json({ error: 'Tên country là bắt buộc' });
+        return res.status(400).json({ error: 'Country name is required' });
       }
 
-      // 2. Validate limit (nếu có)
-      const limitValue = parsePositiveIntOrDefault(req.query.limit, 20);
-      if (limitValue === null || limitValue > 100) {
-        return res.status(400).json({ error: 'Giá trị limit phải nằm trong khoảng 1-100' });
+      //  Validate limit và page (hỗ trợ pagination)
+      const limit = parsePositiveIntOrDefault(req.query.limit, 20);
+      if (limit === null) {
+        return res.status(400).json({ error: 'limit must be a positive integer' });
       }
 
-      // 3. Chuyển lowercase + escape ký tự LIKE
+      const page = parsePositiveIntOrDefault(req.query.page, 1);
+      if (page === null) {
+        return res.status(400).json({ error: 'page must be a positive integer' });
+      }
+
+      const offset = (page - 1) * limit;
+
+      //  Chuyển keyword về lowercase và escape ký tự đặc biệt LIKE
       const keywordLower = keywordRaw.toLowerCase();
       const escapedKeyword = keywordLower.replace(/[%_]/g, '\\$&');
       const likePattern = `%${escapedKeyword}%`;
 
-      // 4. Query
-      const countries = await Country.findAll({
-        attributes: ['id', 'name', 'code', 'flag'],
+      //  Query database
+      const { rows: countries, count: totalItems } = await Country.findAndCountAll({
+        attributes: COUNTRY_ATTRIBUTES,
         where: where(
           fn('LOWER', col('name')),
-          {
-            [Op.like]: likePattern
-          }
+          { [Op.like]: likePattern }
         ),
         order: [['name', 'ASC']],
-        limit: limitValue
+        limit,
+        offset,
+        // escape ký tự %/_ trong LIKE
+        escape: '\\'
       });
 
-      // 5. Trả về dạng chuẩn
+      //  Tính tổng số trang
+      const totalPages = Math.ceil(totalItems / limit);
+
+      // Trả về JSON chuẩn
       return res.json({
         results: countries,
-        total: countries.length,
-        limit: limitValue,
+        pagination: {
+          totalItems,
+          totalPages,
+          page,
+          limit
+        },
         keyword: keywordRaw
       });
 
     } catch (error) {
-      return res.status(500).json({ error: 'Lỗi khi tìm kiếm country theo tên' });
+      console.error('searchCountriesByName error:', error);
+      return res.status(500).json({ error: 'Error searching countries by name' });
     }
   }
 
 
-  // Lấy thông tin một country theo ID
+
+  // Get a single country by ID
   static async getCountryById(req, res) {
     try {
       const { id } = req.params;
       const countryId = Number.parseInt(id, 10);
       if (!Number.isInteger(countryId) || countryId <= 0) {
-        return res.status(400).json({ error: 'ID country không hợp lệ' });
+        return res.status(400).json({ error: 'Country Id is not valid' });
       }
 
       const country = await Country.findByPk(countryId, {
-        attributes: ['id', 'name', 'code', 'flag']
+        attributes: COUNTRY_ATTRIBUTES
       });
       if (!country) {
-        return res.status(404).json({ error: 'Country không tồn tại' });
+        return res.status(404).json({ error: 'Country does not exist' });
       }
       res.json(country);
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi lấy thông tin country' });
+      res.status(500).json({ error: 'Error retrieving country information' });
     }
   }
 
@@ -131,57 +164,57 @@ class CountriesController {
     try {
       const { name, code, flag } = req.body;
       if (!name) {
-        return res.status(400).json({ error: 'Tên là bắt buộc' });
+        return res.status(400).json({ error: 'Name is required' });
       }
       const country = await Country.create({ name, code, flag });
       res.status(201).json(country);
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi thêm country' });
+      res.status(500).json({ error: 'Error creating country' });
     }
   }
 
-  // Cập nhật country
+  // Update country
   static async updateCountry(req, res) {
     try {
       const { id } = req.params;
       const countryId = Number.parseInt(id, 10);
       if (!Number.isInteger(countryId) || countryId <= 0) {
-        return res.status(400).json({ error: 'ID country không hợp lệ' });
+        return res.status(400).json({ error: 'Country Id is not valid' });
       }
       const { name, code, flag } = req.body;
       if (!name) {
-        return res.status(400).json({ error: 'Tên là bắt buộc' });
+        return res.status(400).json({ error: 'Name is required' });
       }
       const [updated] = await Country.update(
         { name, code, flag },
         { where: { id: countryId } }
       );
       if (updated === 0) {
-        return res.status(404).json({ error: 'Country không tồn tại' });
+        return res.status(404).json({ error: 'Country does not exist' });
       }
       const country = await Country.findByPk(countryId);
       res.json(country);
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi cập nhật country' });
+      res.status(500).json({ error: 'Error updating country' });
     }
   }
 
-  // Xóa country
+  // delete country
   static async deleteCountry(req, res) {
     try {
       const { id } = req.params;
       const countryId = Number.parseInt(id, 10);
       if (!Number.isInteger(countryId) || countryId <= 0) {
-        return res.status(400).json({ error: 'ID country không hợp lệ' });
+        return res.status(400).json({ error: 'Country Id is not valid' });
       }
 
       const deleted = await Country.destroy({ where: { id: countryId } });
       if (deleted === 0) {
-        return res.status(404).json({ error: 'Country không tồn tại' });
+        return res.status(404).json({ error: 'Country does not exist' });
       }
-      res.json({ message: 'Country đã được xóa thành công' });
+      res.json({ message: 'Country has been successfully deleted' });
     } catch (error) {
-      res.status(500).json({ error: 'Lỗi khi xóa country' });
+      res.status(500).json({ error: 'Error deleting country' });
     }
   }
 

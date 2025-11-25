@@ -36,6 +36,9 @@ const router = express.Router();
  *         venue_id:
  *           type: integer
  *           description: The ID of the team's home venue
+ *         isPopular:
+ *           type: boolean
+ *           description: Indicates if the team is marked as popular
  *         created_at:
  *           type: string
  *           format: date-time
@@ -55,6 +58,7 @@ const router = express.Router();
  *         national: false
  *         logo: "https://example.com/logo.png"
  *         venue_id: 556
+ *         isPopular: true
  *         created_at: "2023-01-01T00:00:00Z"
  *         updated_at: "2023-01-01T00:00:00Z"
  */
@@ -241,7 +245,7 @@ router.get('/teams/league/:leagueID', teamsController.getTeamsByLeague); // GET 
  *       500:
  *         description: Internal server error occurred while retrieving statistics
  */
-router.get('/teams/:teamId/leagues/:leagueId/season/:season/stats', teamsController.getStatsByTeamIdAndSeason); // GET /api/teams/:teamId/leagues/:leagueId/season/:season/stats
+router.get('/teams/:teamId/leagues/:leagueId/season/:season/stats', teamsController.getStatsByTeamIdAndSeasonAndLeague); // GET /api/teams/:teamId/leagues/:leagueId/season/:season/stats
 
 /**
  * @openapi
@@ -307,6 +311,82 @@ router.get('/teams/:teamId/leagues/:leagueId/season/:season/stats', teamsControl
  *         description: Internal server error occurred during search
  */
 router.get('/teams/search', teamsController.searchTeamsByName); // GET /api/teams/search
+
+/**
+ * @openapi
+ * /api/teams/popular:
+ *   get:
+ *     summary: Retrieve a list of popular teams
+ *     tags:
+ *       - Teams
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page index (1-based)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 20
+ *         description: Number of teams per page
+ *     description: Returns a paginated list of popular teams ordered alphabetically by name.
+ *     responses:
+ *       200:
+ *         description: Paginated list of popular teams
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Team'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *             example:
+ *               data:
+ *                 - id: 1
+ *                   name: "Manchester United"
+ *                   code: "MUN"
+ *                   country: "England"
+ *                   founded: 1878
+ *                   national: false
+ *                   logo: "https://example.com/logo.png"
+ *                   venue_id: 556
+ *                 - id: 2
+ *                   name: "Real Madrid"
+ *                   code: "RMA"
+ *                   country: "Spain"
+ *                   founded: 1902
+ *                   national: false
+ *                   logo: "https://example.com/logo2.png"
+ *                   venue_id: 1456
+ *               pagination:
+ *                 totalItems: 2
+ *                 totalPages: 1
+ *                 page: 1
+ *                 limit: 20
+ *       500:
+ *         description: Internal server error occurred while retrieving popular teams
+ */
+router.get('/teams/popular', teamsController.getPopularTeams); // GET /api/teams/popular
 
 /**
  * @openapi
@@ -508,7 +588,6 @@ router.put('/teams/:id', teamsController.updateTeam);       // PUT /api/teams/:i
  *         description: Internal server error occurred while deleting the team
  */
 router.delete('/teams/:id', teamsController.deleteTeam);    // DELETE /api/teams/:id
-
 /**
  * @openapi
  * /api/teams/import:

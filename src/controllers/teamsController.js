@@ -405,7 +405,47 @@ const TeamsController = {
 		}
 	},
 
-	async getStatsByTeamIdAndSeason(req, res) {
+	async getPopularTeams(req, res) {
+		try {
+			const { page, limit } = req.query;
+
+			const pageNumber = parsePositiveIntOrDefault(page, 1);
+			if (pageNumber === null) {
+				return res.status(400).json({ error: 'Giá trị page phải là số nguyên dương' });
+			}
+
+			const limitNumber = parsePositiveIntOrDefault(limit, 20);
+			if (limitNumber === null) {
+				return res.status(400).json({ error: 'Giá trị limit phải là số nguyên dương' });
+			}
+
+			const offset = (pageNumber - 1) * limitNumber;
+
+			const { rows, count } = await Team.findAndCountAll({
+				where: { isPopular: true },
+				attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id'],
+				order: [['name', 'ASC']],
+				limit: limitNumber,
+				offset
+			});
+
+			const totalPages = Math.ceil(count / limitNumber);
+
+			res.json({
+				data: rows,
+				pagination: {
+					totalItems: count,
+					totalPages,
+					page: pageNumber,
+					limit: limitNumber
+				}
+			});
+		} catch (error) {
+			res.status(500).json({ error: 'Lỗi khi lấy danh sách teams phổ biến' });
+		}
+	},
+
+	async getStatsByTeamIdAndSeasonAndLeague(req, res) {
 		try {
 			const rawTeamId = req.params.teamId ?? req.params.id ?? req.query.teamId;
 			const rawLeagueId = req.params.leagueId ?? req.params.leagues_id ?? req.query.league;

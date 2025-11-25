@@ -43,6 +43,11 @@ const Team = sequelize.define('Team', {
 		},
 		onDelete: 'SET NULL',
 		onUpdate: 'CASCADE'
+	},
+	isPopular: {
+		type: DataTypes.BOOLEAN,
+		allowNull: false,
+		defaultValue: false
 	}
 }, {
 	tableName: 'teams',

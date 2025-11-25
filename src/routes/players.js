@@ -13,50 +13,50 @@ const router = express.Router();
  *         id:
  *           type: integer
  *           format: int32
- *           description: Định danh duy nhất của cầu thủ
+ *           description: Unique identifier of the player
  *         name:
  *           type: string
- *           description: Tên đầy đủ được hiển thị
+ *           description: Full display name
  *         firstname:
  *           type: string
- *           description: Tên riêng (nếu có)
+ *           description: First name (if available)
  *         lastname:
  *           type: string
- *           description: Họ (nếu có)
+ *           description: Last name (if available)
  *         age:
  *           type: integer
  *           format: int32
- *           description: Tuổi hiện tại
+ *           description: Current age
  *         birth_date:
  *           type: string
  *           format: date
- *           description: Ngày sinh theo chuẩn ISO 8601 (YYYY-MM-DD)
+ *           description: Birth date in ISO 8601 format (YYYY-MM-DD)
  *         birth_place:
  *           type: string
- *           description: Nơi sinh
+ *           description: Place of birth
  *         birth_country:
  *           type: string
- *           description: Quốc gia nơi sinh
+ *           description: Country of birth
  *         nationality:
  *           type: string
- *           description: Quốc tịch thi đấu
+ *           description: Playing nationality
  *         height:
  *           type: string
- *           description: Chiều cao dạng chuỗi (ví dụ "180 cm")
+ *           description: Height as a string (e.g., "180 cm")
  *         weight:
  *           type: string
- *           description: Cân nặng dạng chuỗi (ví dụ "75 kg")
+ *           description: Weight as a string (e.g., "75 kg")
  *         number:
  *           type: integer
  *           format: int32
- *           description: Số áo thi đấu hiện tại
+ *           description: Current jersey number
  *         position:
  *           type: string
- *           description: Vị trí sở trường
+ *           description: Preferred position
  *         photo:
  *           type: string
  *           format: uri
- *           description: Ảnh đại diện (URL)
+ *           description: Profile photo (URL)
  *       required:
  *         - id
  *         - name
@@ -75,14 +75,42 @@ const router = express.Router();
  *         number: 10
  *         position: "Forward"
  *         photo: "https://example.com/messi.png"
+ *     Country:
+ *       type: object
+ *       description: Country information mapped from the countries table
+ *       properties:
+ *         id:
+ *           type: integer
+ *           format: int32
+ *           description: Country ID in the system
+ *         name:
+ *           type: string
+ *           description: Country name
+ *         code:
+ *           type: string
+ *           description: Country code, e.g., "AR"
+ *         flag:
+ *           type: string
+ *           format: uri
+ *           description: URL of the country flag image
+ *     PlayerDetail:
+ *       allOf:
+ *         - $ref: '#/components/schemas/Player'
+ *         - type: object
+ *           properties:
+ *             country:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Country'
+ *               nullable: true
+ *               description: Country found from nationality (null if no match)
  */
 
 /**
  * @openapi
  * /api/players:
  *   get:
- *     summary: Lấy danh sách cầu thủ kèm phân trang
- *     description: Trả về danh sách cầu thủ, sắp xếp theo tên. Người dùng có thể điều chỉnh trang và kích thước trang qua query string.
+ *     summary: Get a list of players with pagination
+ *     description: Returns a list of players, sorted by name. Users can adjust the page and page size via query strings.
  *     tags:
  *       - Players
  *     parameters:
@@ -92,7 +120,7 @@ const router = express.Router();
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: Trang hiện tại (tính từ 1).
+ *         description: Current page (starting from 1).
  *       - in: query
  *         name: limit
  *         schema:
@@ -100,10 +128,10 @@ const router = express.Router();
  *           minimum: 1
  *           maximum: 100
  *           default: 20
- *         description: Số bản ghi mỗi trang.
+ *         description: Number of records per page.
  *     responses:
  *       200:
- *         description: Danh sách cầu thủ và thông tin phân trang.
+ *         description: List of players and pagination information.
  *         content:
  *           application/json:
  *             schema:
@@ -137,17 +165,17 @@ const router = express.Router();
  *                 page: 1
  *                 limit: 20
  *       400:
- *         description: Tham số phân trang không hợp lệ (ví dụ page <= 0).
+ *         description: Invalid pagination parameters (e.g., page <= 0).
  *         content:
  *           application/json:
  *             example:
  *               error: "Giá trị page phải là số nguyên dương"
  *       500:
- *         description: Lỗi hệ thống khi truy vấn dữ liệu.
+ *         description: Internal server error while querying data.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi lấy danh sách cầu thủ"
+ *               error: "Error retrieving players list"
  */
 router.get('/players', playersController.getAllPlayers);
 
@@ -222,13 +250,13 @@ router.get('/players', playersController.getAllPlayers);
  *         content:
  *           application/json:
  *             example:
- *               error: "Invalid pagination parameters: page must be a positive integer"
+ *               error: "Giá trị page phải là số nguyên dương"
  *       500:
  *         description: Internal server error while fetching popular players.
  *         content:
  *           application/json:
  *             example:
- *               error: "Internal server error when fetching popular players"
+ *               error: "Error fetching popular players list"
  *     x-request-examples:
  *       - name: Example request
  *         value: "/api/players/popular?page=1&limit=20"
@@ -240,8 +268,8 @@ router.get('/players/popular', playersController.getPopularPlayers);
  * @openapi
  * /api/players/search:
  *   get:
- *     summary: Tìm cầu thủ theo tên hiển thị
- *     description: Cho phép tìm theo từ khóa một phần, không phân biệt chữ hoa thường. Trả về tối đa 100 bản ghi.
+ *     summary: Search players by display name
+ *     description: Allows partial keyword search, case-insensitive. Returns up to 100 records.
  *     tags:
  *       - Players
  *     parameters:
@@ -250,7 +278,7 @@ router.get('/players/popular', playersController.getPopularPlayers);
  *         required: true
  *         schema:
  *           type: string
- *         description: Từ khóa cần tìm (ít nhất 1 ký tự).
+ *         description: Keyword to search (at least 1 character).
  *       - in: query
  *         name: limit
  *         schema:
@@ -258,10 +286,10 @@ router.get('/players/popular', playersController.getPopularPlayers);
  *           minimum: 1
  *           maximum: 100
  *           default: 20
- *         description: Số kết quả tối đa trả về.
+ *         description: Maximum number of results to return.
  *     responses:
  *       200:
- *         description: Danh sách kết quả phù hợp với từ khóa.
+ *         description: List of matching results.
  *         content:
  *           application/json:
  *             schema:
@@ -286,17 +314,17 @@ router.get('/players/popular', playersController.getPopularPlayers);
  *               limit: 20
  *               keyword: "ronaldo"
  *       400:
- *         description: Thiếu tham số name hoặc limit không hợp lệ.
+ *         description: Missing name parameter or invalid limit.
  *         content:
  *           application/json:
  *             example:
- *               error: "Tham số name là bắt buộc"
+ *               error: "name parameter is required"
  *       500:
- *         description: Lỗi hệ thống khi tìm kiếm.
+ *         description: Internal server error during search.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi tìm kiếm cầu thủ"
+ *               error: "Error searching for players"
  */
 router.get('/players/search', playersController.searchPlayersByName);
 
@@ -304,7 +332,8 @@ router.get('/players/search', playersController.searchPlayersByName);
  * @openapi
  * /api/players/{id}:
  *   get:
- *     summary: Lấy chi tiết một cầu thủ
+ *     summary: Get details of a single player
+ *     description: Returns player information along with country data (if determined from nationality).
  *     tags:
  *       - Players
  *     parameters:
@@ -314,43 +343,51 @@ router.get('/players/search', playersController.searchPlayersByName);
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: ID cầu thủ.
+ *         description: Player ID.
  *     responses:
  *       200:
- *         description: Thông tin chi tiết của cầu thủ.
+ *         description: Detailed information of the player.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Player'
+ *               $ref: '#/components/schemas/PlayerDetail'
+ *             example:
+ *               id: 394
+ *               name: "Lionel Andrés Messi"
+ *               nationality: "Argentina"
+ *               position: "Forward"
+ *               country:
+ *                 id: 9
+ *                 name: "Argentina"
+ *                 code: "AR"
+ *                 flag: "https://example.com/flags/ar.svg"
  *       400:
- *         description: ID không hợp lệ.
+ *         description: Invalid ID.
  *         content:
  *           application/json:
  *             example:
- *               error: "ID cầu thủ không hợp lệ"
+ *               error: "Invalid player ID"
  *       404:
- *         description: Không tìm thấy cầu thủ.
+ *         description: Player not found.
  *         content:
  *           application/json:
  *             example:
- *               error: "Không tìm thấy cầu thủ"
+ *               error: "Player not found"
  *       500:
- *         description: Lỗi hệ thống.
+ *         description: Internal server error.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi lấy thông tin cầu thủ"
+ *               error: "Error retrieving player information"
  */
 router.get('/players/:id', playersController.getPlayerById);
-
-router.get('/players-stats', playersController.getPlayerStatsWithFilters);
 
 /**
  * @openapi
  * /api/players:
  *   post:
- *     summary: Thêm mới một cầu thủ
- *     description: Trả về bản ghi cầu thủ vừa tạo. ID và name là bắt buộc.
+ *     summary: Create a new player
+ *     description: Returns the created player record. ID and name are required.
  *     tags:
  *       - Players
  *     requestBody:
@@ -367,29 +404,29 @@ router.get('/players-stats', playersController.getPlayerStatsWithFilters);
  *             position: "Midfielder"
  *     responses:
  *       201:
- *         description: Tạo thành công cầu thủ mới.
+ *         description: Player created successfully.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Player'
  *       400:
- *         description: Thiếu dữ liệu bắt buộc hoặc ID không hợp lệ.
+ *         description: Missing required data or invalid ID.
  *         content:
  *           application/json:
  *             example:
- *               error: "ID cầu thủ bắt buộc và phải là số nguyên dương"
+ *               error: "Player ID is required and must be a positive integer"
  *       409:
- *         description: ID đã tồn tại trong hệ thống.
+ *         description: ID already exists in the system.
  *         content:
  *           application/json:
  *             example:
- *               error: "Cầu thủ đã tồn tại"
+ *               error: "Player already exists"
  *       500:
- *         description: Lỗi hệ thống khi lưu dữ liệu.
+ *         description: Internal server error during data saving.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi tạo cầu thủ mới"
+ *               error: "Error creating new player"
  */
 router.post('/players', playersController.createPlayer);
 
@@ -397,8 +434,8 @@ router.post('/players', playersController.createPlayer);
  * @openapi
  * /api/players/{id}:
  *   put:
- *     summary: Cập nhật thông tin cầu thủ
- *     description: Cho phép cập nhật một phần dữ liệu. Không hỗ trợ thay đổi ID.
+ *     summary: Update player information
+ *     description: Allows partial updates. ID cannot be changed.
  *     tags:
  *       - Players
  *     parameters:
@@ -408,7 +445,7 @@ router.post('/players', playersController.createPlayer);
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: ID cầu thủ cần cập nhật.
+ *         description: ID of the player to update.
  *     requestBody:
  *       required: true
  *       content:
@@ -430,29 +467,36 @@ router.post('/players', playersController.createPlayer);
  *             position: "Midfielder"
  *     responses:
  *       200:
- *         description: Bản ghi cầu thủ sau khi cập nhật.
+ *         description: Player record after update.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Player'
  *       400:
- *         description: Dữ liệu cập nhật không hợp lệ.
+ *         description: Invalid update data.
  *         content:
  *           application/json:
- *             example:
- *               error: "Không có dữ liệu để cập nhật"
+ *             examples:
+ *               invalidId:
+ *                 summary: Invalid ID
+ *                 value:
+ *                   error: "Invalid player ID"
+ *               emptyPayload:
+ *                 summary: No fields to update
+ *                 value:
+ *                   error: "No data to update"
  *       404:
- *         description: Không tìm thấy cầu thủ.
+ *         description: Player not found.
  *         content:
  *           application/json:
  *             example:
- *               error: "Không tìm thấy cầu thủ để cập nhật"
+ *               error: "Player not found for update"
  *       500:
- *         description: Lỗi hệ thống khi cập nhật dữ liệu.
+ *         description: Internal server error during update.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi cập nhật cầu thủ"
+ *               error: "Error updating player"
  */
 router.put('/players/:id', playersController.updatePlayer);
 
@@ -460,7 +504,7 @@ router.put('/players/:id', playersController.updatePlayer);
  * @openapi
  * /api/players/{id}:
  *   delete:
- *     summary: Xóa cầu thủ khỏi hệ thống
+ *     summary: Delete a player from the system
  *     tags:
  *       - Players
  *     parameters:
@@ -470,28 +514,28 @@ router.put('/players/:id', playersController.updatePlayer);
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: ID cầu thủ cần xóa.
+ *         description: ID of the player to delete.
  *     responses:
  *       204:
- *         description: Xóa thành công, không trả về nội dung.
+ *         description: Deletion successful, no content returned.
  *       400:
- *         description: ID không hợp lệ.
+ *         description: Invalid ID.
  *         content:
  *           application/json:
  *             example:
- *               error: "ID cầu thủ không hợp lệ"
+ *               error: "Invalid player ID"
  *       404:
- *         description: Không tìm thấy cầu thủ để xóa.
+ *         description: Player not found for deletion.
  *         content:
  *           application/json:
  *             example:
- *               error: "Không tìm thấy cầu thủ để xóa"
+ *               error: "Player not found for deletion"
  *       500:
- *         description: Lỗi hệ thống khi xóa dữ liệu.
+ *         description: Internal server error during deletion.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi xóa cầu thủ"
+ *               error: "Error deleting player"
  */
 router.delete('/players/:id', playersController.deletePlayer);
 
@@ -499,12 +543,12 @@ router.delete('/players/:id', playersController.deletePlayer);
  * @openapi
  * /api/players-stats:
  *   get:
- *     summary: Lấy thông tin thống kê cầu thủ từ API Football
+ *     summary: Get player statistics from API Football
  *     description: |
- *       Truy vấn thông tin chi tiết và thống kê cầu thủ từ API Football (api-sports.io)
- *       dựa trên các bộ lọc: playerid, teamid, leagueid, season.
+ *       Retrieves detailed player information and statistics from API Football (api-sports.io)
+ *       based on filters: playerid, teamid, leagueid, season.
  *       
- *       **Ví dụ URL:**
+ *       **Example URL:**
  *       - `/players-stats?playerid=874&season=2021&leagueid=39&teamid=33`
  *     tags:
  *       - Players
@@ -514,28 +558,28 @@ router.delete('/players/:id', playersController.deletePlayer);
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của cầu thủ (bắt buộc)
+ *         description: Player ID (required)
  *       - in: query
  *         name: season
  *         required: false
  *         schema:
  *           type: integer
- *         description: Mùa giải (ví dụ 2021, 2022)
+ *         description: Season (e.g., 2021, 2022)
  *       - in: query
  *         name: leagueid
  *         required: false
  *         schema:
  *           type: integer
- *         description: ID của giải đấu (ví dụ 39 = Premier League)
+ *         description: League ID (e.g., 39 = Premier League)
  *       - in: query
  *         name: teamid
  *         required: false
  *         schema:
  *           type: integer
- *         description: ID của đội bóng
+ *         description: Team ID
  *     responses:
  *       200:
- *         description: Lấy thông tin thành công
+ *         description: Retrieval successful
  *         content:
  *           application/json:
  *             schema:
@@ -546,27 +590,27 @@ router.delete('/players/:id', playersController.deletePlayer);
  *                   example: true
  *                 data:
  *                   type: object
- *                   description: Dữ liệu từ API Football (response gốc từ api-sports.io)
+ *                   description: Data from API Football (original response from api-sports.io)
  *       400:
- *         description: Tham số playerid không được cung cấp
+ *         description: playerid parameter not provided
  *         content:
  *           application/json:
  *             example:
- *               error: "playerid là bắt buộc"
+ *               error: "playerid is required"
  *       504:
- *         description: Hết timeout khi kết nối tới API Football
+ *         description: Timeout when connecting to API Football
  *         content:
  *           application/json:
  *             example:
  *               success: false
- *               error: "Hết timeout khi kết nối tới API Football"
+ *               error: "Timeout when connecting to API Football"
  *       500:
- *         description: Lỗi hệ thống
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             example:
  *               success: false
- *               error: "Lỗi khi lấy thông tin thống kê cầu thủ"
+ *               error: "Error getting player statistics"
  *               details: "Error details"
  */
 router.get('/players-stats', playersController.getPlayerStatsWithFilters);
@@ -576,8 +620,8 @@ router.get('/players-stats', playersController.getPlayerStatsWithFilters);
  * @openapi
  * /api/players/import:
  *   post:
- *     summary: Nhập dữ liệu cầu thủ từ API Football
- *     description: Gọi API Football để tải danh sách cầu thủ theo trang và lưu/upsert vào cơ sở dữ liệu `players`.
+ *     summary: Import player data from API Football
+ *     description: Calls API Football to load player lists by page and save/upsert into the `players` database.
  *     tags:
  *       - Players
  *     parameters:
@@ -587,31 +631,31 @@ router.get('/players-stats', playersController.getPlayerStatsWithFilters);
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: Mùa giải cần import (ví dụ 2021).
+ *         description: Season to import (e.g., 2021).
  *       - in: query
  *         name: league
  *         required: true
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: ID giải đấu trong API Football (ví dụ 39 = Premier League).
+ *         description: League ID in API Football (e.g., 39 = Premier League).
  *       - in: query
  *         name: team
  *         required: true
  *         schema:
  *           type: integer
  *           minimum: 1
- *         description: ID đội bóng trong API Football.
+ *         description: Team ID in API Football.
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: Trang dữ liệu cần tải.
+ *         description: Page of data to load.
  *     responses:
  *       200:
- *         description: Số lượng cầu thủ được nhập thành công trong trang yêu cầu.
+ *         description: Number of players successfully imported in the requested page.
  *         content:
  *           application/json:
  *             example:
@@ -624,17 +668,17 @@ router.get('/players-stats', playersController.getPlayerStatsWithFilters);
  *               page: 1
  *               totalPages: 40
  *       400:
- *         description: Thiếu hoặc sai định dạng query `season`, `league` hoặc `page`.
+ *         description: Missing or invalid format for query `season`, `league`, or `page`.
  *         content:
  *           application/json:
  *             example:
- *               error: "page phải là số nguyên dương"
+ *               error: "season is required"
  *       500:
- *         description: Lỗi hệ thống khi gọi API hoặc lưu dữ liệu.
+ *         description: Internal server error when calling API or saving data.
  *         content:
  *           application/json:
  *             example:
- *               error: "Lỗi khi import cầu thủ từ API Football"
+ *               error: "Error importing players from API Football"
  */
 router.post('/players/import', playersController.importPlayersFromApiFootball);
 export default router;

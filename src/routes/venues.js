@@ -196,4 +196,36 @@ router.post('/venues', venuesController.createVenue);          // POST /api/venu
  *         description: Internal Server Error
  */
 router.put('/venues/:id', venuesController.updateVenue);       // PUT /api/venues/:id
+
+/**
+ * @openapi
+ * /api/venues/import:
+ *   post:
+ *     summary: Import a venue from API-Football
+ *     description: Gọi API-Football để lấy thông tin venue theo ID và lưu vào bảng venues.
+ *     tags:
+ *       - Venues
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: ID venue trong API-Football.
+ *     responses:
+ *       200:
+ *         description: Kết quả nhập dữ liệu venue.
+ *         content:
+ *           application/json:
+ *             example:
+ *               imported: 1
+ *               id: 19939
+ *       400:
+ *         description: Thiếu hoặc sai định dạng tham số id.
+ *       500:
+ *         description: Lỗi hệ thống hoặc lỗi từ API-Football.
+ */
+router.post('/venues/import', venuesController.importVenuesFromApiFootball); // POST /api/venues/import
+
 export default router;

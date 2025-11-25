@@ -10,21 +10,12 @@ const router = express.Router();
  *     League:
  *       type: object
  *       properties:
- *         id:
- *           type: integer
- *           format: int32
  *         name:
  *           type: string
  *         type:
  *           type: string
  *         logo:
  *           type: string
- *         created_at:
- *           type: string
- *           format: date-time
- *         updated_at:
- *           type: string
- *           format: date-time
  *       required:
  *         - name
  */
@@ -48,7 +39,7 @@ const router = express.Router();
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/League'
- *             example: [{ "id": 1, "name": "Premier League", "type": "league", "logo": "https://.../pl.png" }]
+ *             example: [{ "name": "Premier League", "type": "league", "logo": "https://.../pl.png" }]
  *       500:
  *         description: Internal Server Error
  */
@@ -77,7 +68,6 @@ router.get('/leagues', LeaguesController.getAllLeagues);          // GET /api/le
  *             schema:
  *               $ref: '#/components/schemas/League'
  *             example:
- *               id: 1
  *               name: "Premier League"
  *               type: "league"
  *               logo: "https://.../pl.png"
@@ -140,7 +130,7 @@ router.post('/leagues', LeaguesController.createLeague);          // POST /api/l
  * @openapi
  * /api/leagues/{id}:
  *   put:
- *     summary: Update an existing league by ID
+ *     summary: Update an existing league by ID (partial updates allowed)
  *     tags:
  *       - Leagues
  *     parameters:
@@ -152,12 +142,19 @@ router.post('/leagues', LeaguesController.createLeague);          // POST /api/l
  *           format: int32
  *         description: The ID of the league to update
  *     requestBody:
- *       description: Updated league object
+ *       description: Fields to update (at least one of `name`, `type`, `logo`)
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/League'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               logo:
+ *                 type: string
  *           example:
  *             name: "Premier League"
  *             logo: "https://example.com/logo.png"
