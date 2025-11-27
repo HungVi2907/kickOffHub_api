@@ -5,8 +5,31 @@ import User from '../models/User.js';
 import Tag from '../models/Tag.js';
 import PostLike from '../models/PostLike.js';
 import PostReport from '../models/PostReport.js';
+import { buildPublicImagePath } from '../middlewares/upload.js';
+import fs from 'fs/promises';
+import path from 'path';
 
 const MAX_PAGE_SIZE = 50;
+const ROOT_DIR = process.cwd();
+
+async function removeImageFile(imageUrl) {
+  if (!imageUrl) return;
+  const relative = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+  const absolutePath = path.join(ROOT_DIR, relative);
+  try {
+    await fs.unlink(absolutePath);
+  } catch (error) {
+    // ignore if file already removed
+  }
+}
+
+function enrichPostPayload(postJson, req) {
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  return {
+    ...postJson,
+    imageUrl: postJson.image_url ? `${baseUrl}${postJson.image_url}` : null,
+  };
+}
 
 async function withLikeCount(postInstance) {
   const json = postInstance.toJSON();
@@ -65,7 +88,9 @@ class PostsController {
         order: [['created_at', 'DESC']]
       });
 
-      const data = await Promise.all(rows.map((post) => withLikeCount(post)));
+      const data = await Promise.all(
+        rows.map(async (post) => enrichPostPayload(await withLikeCount(post), req))
+      );
 
       res.json({ page, pageSize, total: count, data });
     } catch (err) {
@@ -100,7 +125,7 @@ class PostsController {
       }
 
       const payload = await withLikeCount(post);
-      res.json(payload);
+      res.json(enrichPostPayload(payload, req));
     } catch (err) {
       res.status(500).json({ error: 'Lỗi khi lấy chi tiết bài viết', details: err.message });
     }
@@ -110,12 +135,14 @@ class PostsController {
     try {
       const data = matchedData(req, { locations: ['body'], includeOptionals: true });
       const { tags = [], ...postData } = data;
+      const imagePath = req.file ? buildPublicImagePath(req.file.filename) : null;
 
       const post = await Post.create({
         user_id: req.user.id,
         title: postData.title,
         content: postData.content,
-        status: postData.status || 'public'
+        status: postData.status || 'public',
+        image_url: imagePath
       });
 
       if (Array.isArray(tags) && tags.length) {
@@ -130,8 +157,12 @@ class PostsController {
       });
 
       const payload = await withLikeCount(fullPost);
-      res.status(201).json(payload);
+      res.status(201).json(enrichPostPayload(payload, req));
     } catch (err) {
+      if (req.file) {
+        const uploadedPath = buildPublicImagePath(req.file.filename);
+        await removeImageFile(uploadedPath);
+      }
       res.status(500).json({ error: 'Lỗi khi tạo bài viết', details: err.message });
     }
   }
@@ -156,7 +187,16 @@ class PostsController {
       }
 
       const data = matchedData(req, { locations: ['body'], includeOptionals: true });
-      const { tags, ...updateData } = data;
+      const { tags, removeImage, ...updateData } = data;
+      const oldImagePath = post.image_url;
+
+      if (req.file) {
+        updateData.image_url = buildPublicImagePath(req.file.filename);
+      }
+
+      if (removeImage === true && !req.file) {
+        updateData.image_url = null;
+      }
 
       if (!Object.keys(updateData).length && tags === undefined) {
         res.status(400).json({ error: 'Không có dữ liệu để cập nhật' });
@@ -171,6 +211,10 @@ class PostsController {
         await syncTags(post, tags);
       }
 
+      if ((req.file || removeImage === true) && oldImagePath && oldImagePath !== updateData.image_url) {
+        await removeImageFile(oldImagePath);
+      }
+
       const updatedPost = await Post.findByPk(postId, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'name', 'email'] },
@@ -179,8 +223,12 @@ class PostsController {
       });
 
       const payload = await withLikeCount(updatedPost);
-      res.json(payload);
+      res.json(enrichPostPayload(payload, req));
     } catch (err) {
+      if (req.file) {
+        const uploadedPath = buildPublicImagePath(req.file.filename);
+        await removeImageFile(uploadedPath);
+      }
       res.status(500).json({ error: 'Lỗi khi cập nhật bài viết', details: err.message });
     }
   }
@@ -204,7 +252,9 @@ class PostsController {
         return;
       }
 
+      const imagePath = post.image_url;
       await post.destroy();
+      await removeImageFile(imagePath);
       res.json({ message: 'Đã xóa bài viết' });
     } catch (err) {
       res.status(500).json({ error: 'Lỗi khi xóa bài viết', details: err.message });

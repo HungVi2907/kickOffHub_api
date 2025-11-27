@@ -1,10 +1,22 @@
+import { Op, fn, col, where } from 'sequelize';
 import League from '../models/League.js';
 
-const LEAGUE_ATTRIBUTES = [ 'id', 'name', 'type', 'logo'];
+const LEAGUE_ATTRIBUTES = ['id', 'name', 'type', 'logo'];
 
 const normalizeLeagueId = (rawId) => {
   const parsed = Number.parseInt(rawId, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const parsePositiveIntOrDefault = (value, defaultValue) => {
+  if (value === undefined || value === null) return defaultValue;
+  const trimmed = String(value).trim();
+  if (trimmed === '') return defaultValue;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return null;
+  }
+  return parsed;
 };
 
 // Controller cho Leagues
@@ -117,6 +129,54 @@ class LeaguesController {
       res.json({ message: 'League has been successfully deleted' });
     } catch (error) {
       res.status(500).json({ error: 'Error deleting league' });
+    }
+  }
+
+  static async searchLeaguesByName(req, res) {
+    try {
+      const keywordRaw = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+      if (!keywordRaw) {
+        return res.status(400).json({ error: 'League name is required' });
+      }
+
+      const limit = parsePositiveIntOrDefault(req.query.limit, 20);
+      if (limit === null || limit > 100) {
+        return res.status(400).json({ error: 'limit must be between 1 and 100' });
+      }
+
+      const page = parsePositiveIntOrDefault(req.query.page, 1);
+      if (page === null) {
+        return res.status(400).json({ error: 'page must be a positive integer' });
+      }
+
+      const offset = (page - 1) * limit;
+      const keywordLower = keywordRaw.toLowerCase();
+      const escapedKeyword = keywordLower.replace(/[%_]/g, '\\$&');
+      const likePattern = `%${escapedKeyword}%`;
+
+      const { rows, count } = await League.findAndCountAll({
+        attributes: LEAGUE_ATTRIBUTES,
+        where: where(fn('LOWER', col('name')), { [Op.like]: likePattern }),
+        order: [['name', 'ASC']],
+        limit,
+        offset,
+        escape: '\\',
+      });
+
+      const totalPages = Math.ceil(count / limit);
+
+      return res.json({
+        results: rows,
+        pagination: {
+          totalItems: count,
+          totalPages,
+          page,
+          limit,
+        },
+        keyword: keywordRaw,
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Error searching leagues' });
     }
   }
 }

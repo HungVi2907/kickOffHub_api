@@ -3,6 +3,8 @@ import { body, param } from 'express-validator';
 import auth from '../middlewares/auth.js';
 import validateRequest from '../middlewares/validateRequest.js';
 import PostsController from '../controllers/postsController.js';
+import { handlePostImageUpload } from '../middlewares/upload.js';
+import { parseJsonFields } from '../middlewares/normalizeFormData.js';
 
 const router = express.Router();
 
@@ -19,6 +21,8 @@ router.get(
 
 router.post(
   '/posts',
+  handlePostImageUpload,
+  parseJsonFields(['tags']),
   [
     body('title').trim().notEmpty().withMessage('Tiêu đề không được để trống'),
     body('content').trim().notEmpty().withMessage('Nội dung không được để trống'),
@@ -40,6 +44,8 @@ router.post(
 
 router.put(
   '/posts/:id',
+  handlePostImageUpload,
+  parseJsonFields(['tags']),
   [
     param('id').isInt({ gt: 0 }).withMessage('ID bài viết phải là số nguyên dương'),
     body('title').optional().trim().notEmpty().withMessage('Tiêu đề không được để trống'),
@@ -54,7 +60,12 @@ router.put(
       .isString()
       .trim()
       .isLength({ min: 2, max: 30 })
-      .withMessage('Mỗi tag phải có từ 2 đến 30 ký tự')
+      .withMessage('Mỗi tag phải có từ 2 đến 30 ký tự'),
+    body('removeImage')
+      .optional()
+      .isBoolean()
+      .withMessage('removeImage phải là giá trị true/false')
+      .toBoolean()
   ],
   validateRequest,
   PostsController.update

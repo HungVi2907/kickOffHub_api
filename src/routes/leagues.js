@@ -45,6 +45,8 @@ const router = express.Router();
  */
 router.get('/leagues', LeaguesController.getAllLeagues);          // GET /api/leagues
 
+router.get('/leagues/search', LeaguesController.searchLeaguesByName);
+
 /**
  * @openapi
  * /api/leagues/{id}:

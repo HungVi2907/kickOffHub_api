@@ -53,6 +53,9 @@ app.use(cors({
 // Middleware để parse JSON
 app.use(express.json());
 
+// Serve uploaded assets
+app.use('/uploads', express.static('uploads'));
+
 // --- Swagger setup (serve API docs at /api/docs) ---
 const swaggerDefinition = {
   openapi: '3.0.0',
