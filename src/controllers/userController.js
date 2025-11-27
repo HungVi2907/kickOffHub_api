@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { matchedData } from 'express-validator';
 import User from '../models/User.js';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/auth.js';
 
 // Controller cho User
 class UserController {
@@ -119,7 +120,7 @@ class UserController {
       if (!match) return res.status(401).json({ error: 'Sai email hoặc mật khẩu' });
 
       const payload = { id: user.id, email: user.email };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1h' });
+      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
       res.json({ token, user: user.toJSON() });
     } catch (err) {

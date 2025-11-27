@@ -41,6 +41,7 @@ CREATE TABLE `countries` (
    `national` tinyint(1) DEFAULT '0',
    `logo` varchar(255) DEFAULT NULL,
    `venue_id` int(11) DEFAULT NULL,
+  `is_popular` tinyint(1) NOT NULL DEFAULT '0',
    `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
    `updated_at` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
    PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,

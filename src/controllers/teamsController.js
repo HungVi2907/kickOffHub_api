@@ -423,7 +423,7 @@ const TeamsController = {
 
 			const { rows, count } = await Team.findAndCountAll({
 				where: { isPopular: true },
-				attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id'],
+				attributes: ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'created_at', 'updated_at'],
 				order: [['name', 'ASC']],
 				limit: limitNumber,
 				offset
@@ -441,7 +441,8 @@ const TeamsController = {
 				}
 			});
 		} catch (error) {
-			res.status(500).json({ error: 'Lỗi khi lấy danh sách teams phổ biến' });
+			console.error('Error in getPopularTeams:', error);
+			res.status(500).json({ error: 'Lỗi khi lấy danh sách teams phổ biến', details: error.message });
 		}
 	},
 
