@@ -1,333 +1,177 @@
-import { matchedData } from 'express-validator';
+import { Op } from 'sequelize';
 import Post from '../models/Post.js';
-import Comment from '../models/Comment.js';
 import User from '../models/User.js';
+import Comment from '../models/Comment.js';
 import Tag from '../models/Tag.js';
-import PostLike from '../models/PostLike.js';
-import PostReport from '../models/PostReport.js';
-import { buildPublicImagePath } from '../middlewares/upload.js';
-import fs from 'fs/promises';
-import path from 'path';
+import PostTag from '../models/PostTag.js';
 
-const MAX_PAGE_SIZE = 50;
-const ROOT_DIR = process.cwd();
+const PostsController = {
 
-async function removeImageFile(imageUrl) {
-  if (!imageUrl) return;
-  const relative = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
-  const absolutePath = path.join(ROOT_DIR, relative);
-  try {
-    await fs.unlink(absolutePath);
-  } catch (error) {
-    // ignore if file already removed
-  }
-}
-
-function enrichPostPayload(postJson, req) {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  return {
-    ...postJson,
-    imageUrl: postJson.image_url ? `${baseUrl}${postJson.image_url}` : null,
-  };
-}
-
-async function withLikeCount(postInstance) {
-  const json = postInstance.toJSON();
-  json.likeCount = await PostLike.count({ where: { post_id: postInstance.id } });
-  return json;
-}
-
-async function syncTags(postInstance, tagNames = []) {
-  if (!Array.isArray(tagNames)) {
-    return;
-  }
-
-  const normalized = new Map();
-  tagNames.forEach((raw) => {
-    if (typeof raw !== 'string') return;
-    const trimmed = raw.trim();
-    if (!trimmed) return;
-    const key = trimmed.toLowerCase();
-    if (!normalized.has(key)) {
-      normalized.set(key, trimmed);
-    }
-  });
-
-  const uniqueTags = [...normalized.values()];
-
-  if (!uniqueTags.length) {
-    await postInstance.setTags([]);
-    return;
-  }
-
-  const tagRecords = await Promise.all(
-    uniqueTags.map(async (value) => {
-      const [tag] = await Tag.findOrCreate({ where: { name: value.toLowerCase() }, defaults: { name: value.toLowerCase() } });
-      return tag;
-    })
-  );
-
-  await postInstance.setTags(tagRecords);
-}
-
-class PostsController {
-  static async list(req, res) {
+  // ================= LIST POSTS ==================
+  async list(req, res) {
     try {
-      const page = Math.max(Number.parseInt(req.query.page, 10) || 1, 1);
-      const pageSize = Math.min(Number.parseInt(req.query.limit, 10) || 10, MAX_PAGE_SIZE);
-      const offset = (page - 1) * pageSize;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const offset = (page - 1) * limit;
 
-      const { count, rows } = await Post.findAndCountAll({
-        distinct: true,
-        limit: pageSize,
-        offset,
+      const posts = await Post.findAndCountAll({
         include: [
-          { model: User, as: 'author', attributes: ['id', 'name', 'email'] },
-          { model: Tag, as: 'tags', through: { attributes: [] }, attributes: ['id', 'name'] }
+          { model: User, as: 'author', attributes: ['id', 'username'] },
+          {
+            model: Tag,
+            as: 'tags',
+            through: { attributes: [] }
+          }
         ],
-        order: [['created_at', 'DESC']]
+        order: [['created_at', 'DESC']],
+        limit,
+        offset,
       });
 
-      const data = await Promise.all(
-        rows.map(async (post) => enrichPostPayload(await withLikeCount(post), req))
-      );
+      return res.json({
+        total: posts.count,
+        page,
+        pageSize: limit,
+        data: posts.rows
+      });
 
-      res.json({ page, pageSize, total: count, data });
     } catch (err) {
-      res.status(500).json({ error: 'Lỗi khi lấy danh sách bài viết', details: err.message });
+      console.error("❌ ERROR LIST POSTS:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-  }
+  },
 
-  static async detail(req, res) {
+
+  // ================= DETAIL ==================
+  async detail(req, res) {
     try {
-      const postId = Number.parseInt(req.params.id, 10);
-      if (!Number.isInteger(postId) || postId <= 0) {
-        res.status(400).json({ error: 'ID bài viết không hợp lệ' });
-        return;
-      }
+      const { id } = req.params;
 
-      const post = await Post.findByPk(postId, {
+      const post = await Post.findByPk(id, {
         include: [
-          { model: User, as: 'author', attributes: ['id', 'name', 'email'] },
+          { model: User, as: 'author', attributes: ['id', 'username'] },
+          { model: Tag, as: 'tags', through: { attributes: [] } },
           {
             model: Comment,
             as: 'comments',
-            include: [{ model: User, as: 'author', attributes: ['id', 'name', 'email'] }]
-          },
-          { model: Tag, as: 'tags', through: { attributes: [] }, attributes: ['id', 'name'] }
-        ],
-        order: [[{ model: Comment, as: 'comments' }, 'created_at', 'ASC']]
+            include: [{ model: User, as: 'author', attributes: ['id', 'username'] }]
+          }
+        ]
       });
 
-      if (!post) {
-        res.status(404).json({ error: 'Bài viết không tồn tại' });
-        return;
-      }
+      if (!post) return res.status(404).json({ error: "Post not found" });
 
-      const payload = await withLikeCount(post);
-      res.json(enrichPostPayload(payload, req));
+      return res.json(post);
+
     } catch (err) {
-      res.status(500).json({ error: 'Lỗi khi lấy chi tiết bài viết', details: err.message });
+      console.error("❌ ERROR DETAIL:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-  }
+  },
 
-  static async create(req, res) {
+
+  // ================= CREATE POST ==================
+  async create(req, res) {
     try {
-      const data = matchedData(req, { locations: ['body'], includeOptionals: true });
-      const { tags = [], ...postData } = data;
-      const imagePath = req.file ? buildPublicImagePath(req.file.filename) : null;
+      console.log("🟦 BODY:", req.body);
+      console.log("🟩 FILE:", req.file);
 
-      const post = await Post.create({
+      const newPost = await Post.create({
         user_id: req.user.id,
-        title: postData.title,
-        content: postData.content,
-        status: postData.status || 'public',
-        image_url: imagePath
+        title: req.body.title,
+        content: req.body.content,
+        status: req.body.status || 'public',
+        image_url: req.file ? req.file.path : null,
       });
 
-      if (Array.isArray(tags) && tags.length) {
-        await syncTags(post, tags);
-      }
-
-      const fullPost = await Post.findByPk(post.id, {
-        include: [
-          { model: User, as: 'author', attributes: ['id', 'name', 'email'] },
-          { model: Tag, as: 'tags', through: { attributes: [] }, attributes: ['id', 'name'] }
-        ]
-      });
-
-      const payload = await withLikeCount(fullPost);
-      res.status(201).json(enrichPostPayload(payload, req));
-    } catch (err) {
-      if (req.file) {
-        const uploadedPath = buildPublicImagePath(req.file.filename);
-        await removeImageFile(uploadedPath);
-      }
-      res.status(500).json({ error: 'Lỗi khi tạo bài viết', details: err.message });
-    }
-  }
-
-  static async update(req, res) {
-    try {
-      const postId = Number.parseInt(req.params.id, 10);
-      if (!Number.isInteger(postId) || postId <= 0) {
-        res.status(400).json({ error: 'ID bài viết không hợp lệ' });
-        return;
-      }
-
-      const post = await Post.findByPk(postId);
-      if (!post) {
-        res.status(404).json({ error: 'Bài viết không tồn tại' });
-        return;
-      }
-
-      if (post.user_id !== req.user.id) {
-        res.status(403).json({ error: 'Bạn không có quyền chỉnh sửa bài viết này' });
-        return;
-      }
-
-      const data = matchedData(req, { locations: ['body'], includeOptionals: true });
-      const { tags, removeImage, ...updateData } = data;
-      const oldImagePath = post.image_url;
-
-      if (req.file) {
-        updateData.image_url = buildPublicImagePath(req.file.filename);
-      }
-
-      if (removeImage === true && !req.file) {
-        updateData.image_url = null;
-      }
-
-      if (!Object.keys(updateData).length && tags === undefined) {
-        res.status(400).json({ error: 'Không có dữ liệu để cập nhật' });
-        return;
-      }
-
-      if (Object.keys(updateData).length) {
-        await post.update(updateData);
-      }
-
-      if (tags !== undefined) {
-        await syncTags(post, tags);
-      }
-
-      if ((req.file || removeImage === true) && oldImagePath && oldImagePath !== updateData.image_url) {
-        await removeImageFile(oldImagePath);
-      }
-
-      const updatedPost = await Post.findByPk(postId, {
-        include: [
-          { model: User, as: 'author', attributes: ['id', 'name', 'email'] },
-          { model: Tag, as: 'tags', through: { attributes: [] }, attributes: ['id', 'name'] }
-        ]
-      });
-
-      const payload = await withLikeCount(updatedPost);
-      res.json(enrichPostPayload(payload, req));
-    } catch (err) {
-      if (req.file) {
-        const uploadedPath = buildPublicImagePath(req.file.filename);
-        await removeImageFile(uploadedPath);
-      }
-      res.status(500).json({ error: 'Lỗi khi cập nhật bài viết', details: err.message });
-    }
-  }
-
-  static async remove(req, res) {
-    try {
-      const postId = Number.parseInt(req.params.id, 10);
-      if (!Number.isInteger(postId) || postId <= 0) {
-        res.status(400).json({ error: 'ID bài viết không hợp lệ' });
-        return;
-      }
-
-      const post = await Post.findByPk(postId);
-      if (!post) {
-        res.status(404).json({ error: 'Bài viết không tồn tại' });
-        return;
-      }
-
-      if (post.user_id !== req.user.id) {
-        res.status(403).json({ error: 'Bạn không có quyền xóa bài viết này' });
-        return;
-      }
-
-      const imagePath = post.image_url;
-      await post.destroy();
-      await removeImageFile(imagePath);
-      res.json({ message: 'Đã xóa bài viết' });
-    } catch (err) {
-      res.status(500).json({ error: 'Lỗi khi xóa bài viết', details: err.message });
-    }
-  }
-
-  static async toggleLike(req, res) {
-    try {
-      const postId = Number.parseInt(req.params.id, 10);
-      if (!Number.isInteger(postId) || postId <= 0) {
-        res.status(400).json({ error: 'ID bài viết không hợp lệ' });
-        return;
-      }
-
-      const post = await Post.findByPk(postId);
-      if (!post) {
-        res.status(404).json({ error: 'Bài viết không tồn tại' });
-        return;
-      }
-
-      const existingLike = await PostLike.findOne({ where: { post_id: postId, user_id: req.user.id } });
-      let liked;
-
-      if (existingLike) {
-        await existingLike.destroy();
-        liked = false;
-      } else {
-        await PostLike.create({ post_id: postId, user_id: req.user.id });
-        liked = true;
-      }
-
-      const likeCount = await PostLike.count({ where: { post_id: postId } });
-      res.json({ liked, likeCount });
-    } catch (err) {
-      res.status(500).json({ error: 'Lỗi khi thao tác like bài viết', details: err.message });
-    }
-  }
-
-  static async report(req, res) {
-    try {
-      const postId = Number.parseInt(req.params.id, 10);
-      if (!Number.isInteger(postId) || postId <= 0) {
-        res.status(400).json({ error: 'ID bài viết không hợp lệ' });
-        return;
-      }
-
-      const post = await Post.findByPk(postId);
-      if (!post) {
-        res.status(404).json({ error: 'Bài viết không tồn tại' });
-        return;
-      }
-
-      const data = matchedData(req, { locations: ['body'], includeOptionals: true });
-
-      try {
-        await PostReport.create({
-          post_id: postId,
-          user_id: req.user.id,
-          reason: data.reason || null
-        });
-      } catch (error) {
-        if (error.name === 'SequelizeUniqueConstraintError') {
-          res.status(409).json({ error: 'Bạn đã báo cáo bài viết này' });
-          return;
+      // ======== ADD TAGS ========
+      if (Array.isArray(req.body.tags) && req.body.tags.length > 0) {
+        for (const t of req.body.tags) {
+          let [tag] = await Tag.findOrCreate({
+            where: { name: t.trim().toLowerCase() }
+          });
+          await PostTag.create({ post_id: newPost.id, tag_id: tag.id });
         }
-        throw error;
       }
 
-      res.status(201).json({ message: 'Đã ghi nhận báo cáo' });
+      return res.status(201).json(newPost);
+
     } catch (err) {
-      res.status(500).json({ error: 'Lỗi khi báo cáo bài viết', details: err.message });
+      console.error("❌ ERROR CREATE POST:", err);
+      return res.status(500).json({
+        error: "Internal Server Error",
+        detail: err.message
+      });
     }
-  }
-}
+  },
+
+
+  // ================= UPDATE POST ==================
+  async update(req, res) {
+    try {
+      const { id } = req.params;
+
+      const post = await Post.findByPk(id);
+      if (!post) return res.status(404).json({ error: "Post not found" });
+
+      await post.update({
+        title: req.body.title ?? post.title,
+        content: req.body.content ?? post.content,
+        status: req.body.status ?? post.status,
+        image_url: req.file ? req.file.path : post.image_url,
+      });
+
+      return res.json(post);
+
+    } catch (err) {
+      console.error("❌ ERROR UPDATE POST:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+
+
+  // ================= DELETE POST ==================
+  async remove(req, res) {
+    try {
+      const { id } = req.params;
+
+      const post = await Post.findByPk(id);
+      if (!post) return res.status(404).json({ error: "Post not found" });
+
+      await post.destroy();
+
+      return res.json({ message: "Deleted successfully" });
+
+    } catch (err) {
+      console.error("❌ ERROR DELETE POST:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+
+
+  // ================= LIKE / UNLIKE ==================
+  async toggleLike(req, res) {
+    try {
+      return res.json({ message: "This endpoint will be implemented later" });
+
+    } catch (err) {
+      console.error("❌ ERROR TOGGLE LIKE:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+
+
+  // ================= REPORT ==================
+  async report(req, res) {
+    try {
+      return res.json({ message: "Report received" });
+
+    } catch (err) {
+      console.error("❌ ERROR REPORT:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+
+};
 
 export default PostsController;

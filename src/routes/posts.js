@@ -8,7 +8,15 @@ import { parseJsonFields } from '../middlewares/normalizeFormData.js';
 
 const router = express.Router();
 
-router.use(auth);
+// ❌ BỎ router.use(auth);
+// router.use(auth);
+
+// ------------------ PUBLIC ROUTES (không yêu cầu login) ------------------
+
+router.use((req, res, next) => {
+  console.log("📌 POST ROUTE HIT:", req.method, req.originalUrl);
+  next();
+});
 
 router.get('/posts', PostsController.list);
 
@@ -19,8 +27,11 @@ router.get(
   PostsController.detail
 );
 
+// ------------------ PROTECTED ROUTES (yêu cầu login) ------------------
+
 router.post(
   '/posts',
+  auth,
   handlePostImageUpload,
   parseJsonFields(['tags']),
   [
@@ -44,6 +55,7 @@ router.post(
 
 router.put(
   '/posts/:id',
+  auth,
   handlePostImageUpload,
   parseJsonFields(['tags']),
   [
@@ -73,6 +85,7 @@ router.put(
 
 router.delete(
   '/posts/:id',
+  auth,
   [param('id').isInt({ gt: 0 }).withMessage('ID bài viết phải là số nguyên dương')],
   validateRequest,
   PostsController.remove
@@ -80,6 +93,7 @@ router.delete(
 
 router.post(
   '/posts/:id/like',
+  auth,
   [param('id').isInt({ gt: 0 }).withMessage('ID bài viết phải là số nguyên dương')],
   validateRequest,
   PostsController.toggleLike
@@ -87,6 +101,7 @@ router.post(
 
 router.post(
   '/posts/:id/report',
+  auth,
   [
     param('id').isInt({ gt: 0 }).withMessage('ID bài viết phải là số nguyên dương'),
     body('reason')
@@ -100,3 +115,4 @@ router.post(
 );
 
 export default router;
+

@@ -1,5 +1,10 @@
+                                        
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
+
 import userRoutes from './routes/users.js';
 import testRoutes from './routes/test.js';
 import countriesRoutes from './routes/countries.js';
@@ -14,80 +19,72 @@ import authRoutes from './routes/auth.js';
 import postsRoutes from './routes/posts.js';
 import commentsRoutes from './routes/comments.js';
 import tagsRoutes from './routes/tags.js';
-// Swagger
-import swaggerJSDoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import './models/index.js';
 
 const app = express();
 
-// Allow frontend domains to call the API
+// ===================== CORS FIXED =====================
 const allowedOrigins = [
-  'https://kick-off-hub-frontend.vercel.app',
+  'https://kickoffhub.space',
+  'https://www.kickoffhub.space',
+  'https://api.kickoffhub.space',
   'http://localhost:5173',
-  process.env.FRONTEND_URL,   
-].filter(Boolean);
-
-const allowedOriginPatterns = [
-  /^https:\/\/kick-off-hub-frontend(?:-[\da-z-]+)?\.vercel\.app$/i,
-  /^http:\/\/localhost:\d+$/i,
-  /^http:\/\/127\.0\.0\.1:\d+$/
+  'http://localhost:3000'
 ];
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin) {
-      callback(null, true);
-      return;
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // Allow requests without origin (Postman etc.)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
-
-    if (allowedOrigins.includes(origin) || allowedOriginPatterns.some((pattern) => pattern.test(origin))) {
-      callback(null, true);
-      return;
-    }
-
-    callback(new Error('Not allowed by CORS'));
+    console.log("❌ Blocked by CORS:", origin);
+    return callback(new Error("Not allowed by CORS"));
   },
-}));
+  credentials: true,
+  methods: "GET,POST,PUT,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type, Authorization",
+};
 
-// Middleware để parse JSON
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+// =====================================================
+
 app.use(express.json());
+app.use(cookieParser());
 
-// Serve uploaded assets
-app.use('/uploads', express.static('uploads'));
-
-// --- Swagger setup (serve API docs at /api/docs) ---
+// ===================== SWAGGER CONFIG =====================
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'Kick Off Hub API',
     version: '1.0.0',
-    description: 'API documentation generated from JSDoc comments',
+    description: 'Kick Off Hub backend API documentation',
   },
   servers: [
     {
-      url: 'http://localhost:3000',
-      description: 'Local server'
+      url: 'https://api.kickoffhub.space/api',
+      description: 'Production Server',
     },
     {
-      url: 'https://kickoffhub-api.onrender.com',
-      description: 'Render deployment',
-    },
+      url: 'http://localhost:3000/api',
+      description: 'Local Development Server',
+    }
   ],
 };
 
 const swaggerOptions = {
   swaggerDefinition,
-  // Files containing annotations as above (adjust paths if needed)
-  apis: ['./src/routes/*.js', './src/controllers/*.js'],
+  apis: ['./src/routes/*.js', './src/controllers/*.js'], // Swagger annotations
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
-// Mount Swagger UI at /api/docs
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec,{swaggerOptions:{operationsSorter:'method'}}));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  swaggerOptions: { operationsSorter: 'alpha' },
+}));
+// ==============================================================
 
-// Sử dụng routes
+// ===================== ROUTES =====================
 app.use('/api', userRoutes);
 app.use('/api', testRoutes);
 app.use('/api', countriesRoutes);
@@ -102,7 +99,9 @@ app.use('/api', authRoutes);
 app.use('/api', postsRoutes);
 app.use('/api', commentsRoutes);
 app.use('/api', tagsRoutes);
-// Route mặc định
+// =====================================================
+
+// Default route
 app.get('/', (req, res) => {
   res.send('Chào mừng đến với Kick Off Hub API');
 });
