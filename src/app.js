@@ -103,7 +103,7 @@ app.use('/api', tagsRoutes);
 
 // Default route
 app.get('/', (req, res) => {
-  res.send('Chào mừng đến với Kick Off Hub API');
+  res.send('Welcome to Kick Off Hub API!');
 });
 
 export default app;
