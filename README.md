@@ -61,33 +61,12 @@ Server mặc định lắng nghe `http://localhost:3000` (kiểm tra `server.js`
 
 Lưu ý: KHÔNG commit `.env` hoặc keys lên GitHub. Nếu lỡ push, hãy rotate (thay) keys ngay.
 
-## Các endpoint chính (tập trung vào Teams)
+## Tài liệu API chính thức
 
-Teams
-- GET /api/teams — lấy tất cả teams
-- GET /api/teams/:id — thông tin team theo id
-- GET /api/teams/league/:leagueID?season=2023 — fetch teams từ API theo league (passthrough)
-- POST /api/teams — tạo team
-- PUT /api/teams/:id — cập nhật
-- DELETE /api/teams/:id — xóa
-- POST /api/teams/import — import teams từ league (body: { leagueId, season })
-- GET /api/teams/:name/search?limit=20 — tìm kiếm theo tên (kí tự, trả về tối đa limit)
-- GET /api/teams/:teamId/stats?season=2023&league=39 — lấy thống kê từ API-Football (teamId trong path)
+Từ nay tài liệu API được cung cấp trực tiếp bằng khối `@openapi` nằm trong từng file route (ví dụ `src/modules/*/routes/*.routes.js`). Các block này đã mô tả đầy đủ summary, description, request/response schema, security (`bearerAuth`) và ví dụ chuẩn.
 
-Đặc biệt: route `GET /api/teams/:teamId/stats` đã thiết kế để tránh xung đột với `/:id` generic bằng cách đặt `stats` ở vị trí sau `:teamId`.
-
-## Ví dụ gọi stats
-
-```powershell
-# Lấy thống kê cho team 33 mùa 2023
-Invoke-RestMethod -Method Get -Uri "http://localhost:3000/api/teams/33/stats?season=2023&league=39" -Headers @{ "x-apisports-key" = "your_api_key_here" }
-```
-
-Hoặc dùng curl:
-
-```bash
-curl "http://localhost:3000/api/teams/33/stats?season=2023&league=39"
-```
+- Khi chỉnh sửa endpoint, hãy cập nhật block tương ứng để giữ tài liệu đồng bộ với hành vi thực tế.
+- Nếu bạn cần xuất tài liệu ra Swagger/Postman, hãy dùng các khối inline này làm nguồn sự thật (single source of truth) thay vì duy trì thư mục `docs/` riêng.
 
 ## Git / bảo mật — nếu lỡ push secrets
 

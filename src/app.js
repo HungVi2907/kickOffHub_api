@@ -1,26 +1,42 @@
-                                        
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
+import { collectDefaultMetrics, register } from 'prom-client';
 
-import userRoutes from './routes/users.js';
-import testRoutes from './routes/test.js';
-import countriesRoutes from './routes/countries.js';
-import leaguesRoutes from './routes/leagues.js';
-import teamsRoutes from './routes/teams.js';
-import venuesRoutes from './routes/venues.js';
-import seasonsRoutes from './routes/seasons.js';
-import leagueTeamSeasonRoutes from './routes/leagueTeamSeason.js';
-import playersRoutes from './routes/players.js';
-import playerTeamLeagueSeasonRoutes from './routes/playerTeamLeagueSeason.js';
-import authRoutes from './routes/auth.js';
-import postsRoutes from './routes/posts.js';
-import commentsRoutes from './routes/comments.js';
-import tagsRoutes from './routes/tags.js';
+import sequelize from './common/db.js';
+import { getRedisStatus } from './common/redisClient.js';
+import { logger } from './common/logger.js';
+import ApiResponse from './common/response.js';
+import { AppException } from './common/exceptions/index.js';
+import errorHandler from './common/errorHandler.js';
+import createContainer from './bootstrap/container.js';
+import registerInfrastructure from './bootstrap/registerInfrastructure.js';
+import loadModules from './bootstrap/moduleLoader.js';
+import buildHttpRouter from './pipelines/httpRouter.js';
+import runModuleTasks from './pipelines/jobScheduler.js';
+
 
 const app = express();
+const container = createContainer();
+registerInfrastructure(container);
+const moduleManifests = await loadModules(container);
+const modularRouter = buildHttpRouter(moduleManifests);
+runModuleTasks(moduleManifests).catch((err) => {
+  logger.error({ err }, 'Failed to start module tasks');
+});
+app.set('container', container);
+export const diContainer = container;
+
+collectDefaultMetrics({ prefix: 'kickoffhub_' });
+
+app.set('trust proxy', 1);
+app.use(pinoHttp({ logger }));
+app.use(helmet());
 
 // ===================== CORS FIXED =====================
 const allowedOrigins = [
@@ -37,7 +53,7 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    console.log("❌ Blocked by CORS:", origin);
+    logger.warn({ origin }, 'Blocked by CORS');
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
@@ -52,6 +68,15 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', apiLimiter);
+
 // ===================== SWAGGER CONFIG =====================
 const swaggerDefinition = {
   openapi: '3.0.0',
@@ -62,11 +87,11 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'https://api.kickoffhub.space/api',
+      url: 'https://api.kickoffhub.space',
       description: 'Production Server',
     },
     {
-      url: 'http://localhost:3000/api',
+      url: 'http://localhost:3000',
       description: 'Local Development Server',
     }
   ],
@@ -74,7 +99,7 @@ const swaggerDefinition = {
 
 const swaggerOptions = {
   swaggerDefinition,
-  apis: ['./src/routes/*.js', './src/controllers/*.js'], // Swagger annotations
+  apis: ['./src/modules/**/*.js'],
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
@@ -85,25 +110,46 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // ==============================================================
 
 // ===================== ROUTES =====================
-app.use('/api', userRoutes);
-app.use('/api', testRoutes);
-app.use('/api', countriesRoutes);
-app.use('/api', leaguesRoutes);
-app.use('/api', teamsRoutes);
-app.use('/api', venuesRoutes);
-app.use('/api', seasonsRoutes);
-app.use('/api', leagueTeamSeasonRoutes);
-app.use('/api', playersRoutes);
-app.use('/api', playerTeamLeagueSeasonRoutes);
-app.use('/api', authRoutes);
-app.use('/api', postsRoutes);
-app.use('/api', commentsRoutes);
-app.use('/api', tagsRoutes);
+if (moduleManifests.length) {
+  app.use('/api', modularRouter);
+}
 // =====================================================
+app.get('/healthz', (_req, res) => {
+  return ApiResponse.success(res, { status: 'ok' }, 'Service healthy');
+});
+
+app.get('/readyz', async (_req, res, next) => {
+  try {
+    await sequelize.authenticate();
+    const redisStatus = getRedisStatus();
+    if (process.env.REDIS_URL && !redisStatus.isReady) {
+      throw new AppException('Redis connection not ready', 'REDIS_UNREADY', 503);
+    }
+    return ApiResponse.success(res, { status: 'ok' }, 'Service ready');
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/metrics', async (_req, res, next) => {
+  try {
+    const metrics = await register.metrics();
+    res.setHeader('Content-Type', register.contentType);
+    res.send(metrics);
+  } catch (err) {
+    next(new AppException('Failed to collect metrics', 'METRICS_ERROR', 500));
+  }
+});
 
 // Default route
-app.get('/', (req, res) => {
-  res.send('Welcome to Kick Off Hub API!');
+app.get('/', (_req, res) => {
+  return ApiResponse.success(
+    res,
+    { info: 'Chào mừng đến với Kick Off Hub API -> EC2 Version!' },
+    'Kick Off Hub API'
+  );
 });
+
+app.use(errorHandler);
 
 export default app;

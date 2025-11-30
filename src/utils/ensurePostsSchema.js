@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize'
-import sequelize from '../config/database.js'
+import sequelize from '../common/db.js'
 
 export async function ensurePostImageColumn() {
   const queryInterface = sequelize.getQueryInterface()

@@ -1,7 +1,7 @@
 import 'dotenv/config'
-import express from 'express'
 import sequelize from './src/config/database.js'
 import app from './src/app.js'
+import { connectRedis } from './src/lib/redisClient.js'
 import { ensurePopularFlagColumn } from './src/utils/ensureTeamsSchema.js'
 import { ensurePostImageColumn } from './src/utils/ensurePostsSchema.js'
 
@@ -13,6 +13,9 @@ async function startServer() {
     await ensurePopularFlagColumn()
     await sequelize.sync()
     await ensurePostImageColumn()
+    await connectRedis().catch((err) => {
+      console.warn('Unable to connect to Redis during startup:', err.message)
+    })
 
     console.log('Database synced successfully.')
 

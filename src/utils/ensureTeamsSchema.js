@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import sequelize from '../common/db.js';
 
 /**
  * Ensure the legacy `teams` table has the `is_popular` column required by the ORM model.
