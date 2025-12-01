@@ -93,6 +93,7 @@ app.options('*', cors(corsOptions));
 // ----------------------------
 // Body parsing
 // ----------------------------
+app.use("/api/upload", uploadRoutes);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -141,10 +142,7 @@ if (moduleManifests.length) {
   app.use('/api', modularRouter);
 }
 
-// ----------------------------
-// UPLOAD ROUTES — MUST BE AFTER MODULE ROUTES
-// ----------------------------
-app.use("/api/upload", uploadRoutes);
+
 
 // ----------------------------
 // HEALTH CHECK
