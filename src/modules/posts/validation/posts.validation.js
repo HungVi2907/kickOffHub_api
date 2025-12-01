@@ -25,6 +25,7 @@ import { z } from 'zod';
  * @type {z.ZodString}
  */
 const tagItemSchema = z.string().trim().min(2).max(30);
+const imageUrlSchema = z.string().trim().url('Image URL is invalid').max(500, 'Image URL is too long');
 
 /**
  * Schema cho mảng tags
@@ -91,6 +92,10 @@ export const createPostSchema = z.object({
     
     /** Mảng tags - Optional, nhưng nếu có phải ít nhất 1 tag */
     tags: tagsArraySchema.min(1, 'At least one tag is required').optional(),
+
+    /** Image URL (đã upload trước) - Accept both camelCase & snake_case */
+    imageUrl: imageUrlSchema.optional(),
+    image_url: imageUrlSchema.optional(),
   }),
 });
 
@@ -140,5 +145,9 @@ export const updatePostSchema = z.object({
      * z.coerce.boolean() để handle cả string 'true'/'false' từ form-data
      */
     removeImage: z.coerce.boolean().optional(),
+
+    /** Image URL mới được upload sẵn (tùy chọn) */
+    imageUrl: imageUrlSchema.optional(),
+    image_url: imageUrlSchema.optional(),
   }),
 });
