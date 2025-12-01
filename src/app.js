@@ -24,6 +24,7 @@ import registerInfrastructure from './bootstrap/registerInfrastructure.js';
 import loadModules from './bootstrap/moduleLoader.js';
 import buildHttpRouter from './pipelines/httpRouter.js';
 import runModuleTasks from './pipelines/jobScheduler.js';
+import uploadRoutes from "./modules/upload/upload.routes.js";
 
 // ----------------------------
 // Express App
@@ -143,7 +144,6 @@ if (moduleManifests.length) {
 // ----------------------------
 // UPLOAD ROUTES — MUST BE AFTER MODULE ROUTES
 // ----------------------------
-import uploadRoutes from "./modules/upload/upload.routes.js";
 app.use("/api/upload", uploadRoutes);
 
 // ----------------------------
