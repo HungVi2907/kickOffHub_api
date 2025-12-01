@@ -126,7 +126,6 @@ export async function createLeague(payload) {
   });
   // Return the newly created league with selected attributes
   return findLeagueById(league.id, LEAGUE_ATTRIBUTES);
-} return findLeagueById(league.id, LEAGUE_ATTRIBUTES);
 }
 
 /**
