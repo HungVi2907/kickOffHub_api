@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Leagues Routes Configuration
+ * @description Express router definitions for league endpoints. Configures public
+ * and private (authenticated) routes with validation middleware and OpenAPI documentation.
+ * @module modules/leagues/routes/leagues
+ * 
+ * @exports publicRouter - Router for unauthenticated league endpoints (GET operations)
+ * @exports privateRouter - Router for authenticated league endpoints (POST, PUT, DELETE operations)
+ */
+
 import { Router } from 'express';
 import auth from '../../../common/authMiddleware.js';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
@@ -9,7 +19,10 @@ import {
   updateLeagueSchema,
 } from '../validation/leagues.validation.js';
 
+/** @type {import('express').Router} Public routes - no authentication required */
 const publicRouter = Router();
+
+/** @type {import('express').Router} Private routes - authentication required */
 const privateRouter = Router();
 
 /**

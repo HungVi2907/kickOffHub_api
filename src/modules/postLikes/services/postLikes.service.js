@@ -1,3 +1,10 @@
+/**
+ * @file Post Likes Service
+ * @description Business logic layer for post like operations. Handles like
+ * toggling, validation, and like count aggregation.
+ * @module modules/postLikes/services/postLikes
+ */
+
 import { UniqueConstraintError } from 'sequelize';
 import {
   countLikes,
@@ -7,6 +14,13 @@ import {
 } from '../repositories/postLikes.repository.js';
 import { findPostById } from '../../posts/repositories/posts.repository.js';
 
+/**
+ * Normalizes and validates a post ID from raw input.
+ * @function normalizePostId
+ * @param {string|number} postIdRaw - Raw post ID value
+ * @returns {number} Validated positive integer post ID
+ * @throws {Error} If post ID is invalid (400 status code)
+ */
 function normalizePostId(postIdRaw) {
   const postId = Number.parseInt(postIdRaw, 10);
   if (!Number.isInteger(postId) || postId < 1) {
@@ -17,6 +31,13 @@ function normalizePostId(postIdRaw) {
   return postId;
 }
 
+/**
+ * Asserts that a post exists in the database.
+ * @async
+ * @function assertPostExists
+ * @param {number} postId - Post ID to check
+ * @throws {Error} If post not found (404 status code)
+ */
 async function assertPostExists(postId) {
   const post = await findPostById(postId);
   if (!post) {
@@ -26,6 +47,18 @@ async function assertPostExists(postId) {
   }
 }
 
+/**
+ * Toggles the like state for a post by the authenticated user.
+ * If the user already liked the post, removes the like. Otherwise, adds a like.
+ * @async
+ * @function toggleLike
+ * @param {string|number} postIdRaw - Raw post ID value
+ * @param {number} userId - ID of the authenticated user
+ * @returns {Promise<Object>} Like toggle result
+ * @returns {boolean} returns.liked - Whether the post is now liked by the user
+ * @returns {number} returns.likeCount - Total number of likes on the post
+ * @throws {Error} If authentication required (401), invalid post ID (400), or post not found (404)
+ */
 export async function toggleLike(postIdRaw, userId) {
   if (!userId) {
     const error = new Error('Authentication required');
@@ -59,6 +92,17 @@ export async function toggleLike(postIdRaw, userId) {
   return { liked, likeCount };
 }
 
+/**
+ * Retrieves the like summary for a post.
+ * @async
+ * @function getLikeSummary
+ * @param {string|number} postIdRaw - Raw post ID value
+ * @param {number|null} userId - ID of the current user (null if not authenticated)
+ * @returns {Promise<Object>} Like summary object
+ * @returns {boolean} returns.liked - Whether the current user liked the post
+ * @returns {number} returns.likeCount - Total number of likes on the post
+ * @throws {Error} If invalid post ID (400) or post not found (404)
+ */
 export async function getLikeSummary(postIdRaw, userId) {
   const postId = normalizePostId(postIdRaw);
   await assertPostExists(postId);

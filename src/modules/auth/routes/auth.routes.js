@@ -1,3 +1,33 @@
+/**
+ * =============================================================================
+ * FILE: src/modules/auth/routes/auth.routes.js
+ * =============================================================================
+ * 
+ * @fileoverview Authentication API Routes
+ * 
+ * @description
+ * Định nghĩa Express routes cho authentication endpoints.
+ * Bao gồm Swagger/OpenAPI documentation cho từng endpoint.
+ * 
+ * ## Endpoints:
+ * | Method | Path           | Description          | Auth |
+ * |--------|----------------|----------------------|------|
+ * | POST   | /auth/register | User registration    | No   |
+ * | POST   | /auth/login    | User authentication  | No   |
+ * 
+ * ## Middleware Chain:
+ * 1. validateSchema - Zod validation
+ * 2. AuthController - Handler
+ * 
+ * @module modules/auth/routes/auth.routes
+ * @requires express
+ * @requires middlewares/validateSchema
+ * @requires modules/auth/controllers/auth.controller
+ * @requires modules/auth/validation/auth.validation
+ * 
+ * =============================================================================
+ */
+
 import { Router } from 'express';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import AuthController from '../controllers/auth.controller.js';

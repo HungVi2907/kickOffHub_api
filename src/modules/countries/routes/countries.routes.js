@@ -1,8 +1,46 @@
+/**
+ * @fileoverview Countries Routes - Express Router Configuration
+ * Định nghĩa các HTTP routes cho resource Countries.
+ * 
+ * Module này cung cấp hai router:
+ * - publicRouter: Các endpoints công khai không yêu cầu authentication
+ *   - GET /countries - Danh sách quốc gia (phân trang)
+ *   - GET /countries/search - Tìm kiếm quốc gia theo tên
+ *   - GET /countries/:id - Chi tiết quốc gia
+ * 
+ * - privateRouter: Các endpoints yêu cầu authentication (JWT Bearer token)
+ *   - POST /countries - Tạo mới quốc gia
+ *   - PUT /countries/:id - Cập nhật quốc gia
+ *   - DELETE /countries/:id - Xóa quốc gia
+ * 
+ * Tất cả endpoints đều được document bằng OpenAPI/Swagger annotations
+ * để tự động generate API documentation.
+ * 
+ * @module modules/countries/routes/countries.routes
+ * @requires express
+ * @requires ../../../common/authMiddleware.js
+ * @requires ../controllers/countries.controller.js
+ * 
+ * @author KickOffHub Team
+ * @version 1.0.0
+ */
+
 import express from 'express';
 import auth from '../../../common/authMiddleware.js';
 import CountriesController from '../controllers/countries.controller.js';
 
+/**
+ * Public Router - Không yêu cầu authentication
+ * Chứa các endpoints đọc dữ liệu quốc gia
+ * @type {import('express').Router}
+ */
 const publicRouter = express.Router();
+
+/**
+ * Private Router - Yêu cầu authentication (Bearer token)
+ * Chứa các endpoints CRUD cho admin/authenticated users
+ * @type {import('express').Router}
+ */
 const privateRouter = express.Router();
 
 /**

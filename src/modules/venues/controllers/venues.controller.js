@@ -1,3 +1,10 @@
+/**
+ * @file Venues Controller
+ * @description HTTP request handlers for venue-related endpoints.
+ * Processes incoming requests and delegates to the venues service.
+ * @module modules/venues/controllers/venues
+ */
+
 import ApiResponse from '../../../common/response.js';
 import { AppException } from '../../../common/exceptions/index.js';
 import toAppException from '../../../common/controllerError.js';
@@ -10,6 +17,13 @@ import {
   importVenuesFromApi,
 } from '../services/venues.service.js';
 
+/**
+ * Reads a value from request body or query parameters.
+ * @function readRequestValue
+ * @param {Object} req - Express request object
+ * @param {string} key - Key to read
+ * @returns {*} Value from body or query, undefined if not found
+ */
 function readRequestValue(req, key) {
   if (req.body && Object.prototype.hasOwnProperty.call(req.body, key)) {
     return req.body[key];
@@ -17,6 +31,15 @@ function readRequestValue(req, key) {
   return req.query ? req.query[key] : undefined;
 }
 
+/**
+ * Maps errors from the venues service to AppException instances.
+ * @function mapVenuesError
+ * @param {Error} err - Original error
+ * @param {string} fallbackMessage - Default error message
+ * @param {string} fallbackCode - Default error code
+ * @param {number} [fallbackStatus=500] - Default HTTP status code
+ * @returns {AppException} Normalized application exception
+ */
 function mapVenuesError(err, fallbackMessage, fallbackCode, fallbackStatus = 500) {
   if (err instanceof AppException) {
     return err;
@@ -42,7 +65,19 @@ function mapVenuesError(err, fallbackMessage, fallbackCode, fallbackStatus = 500
   return toAppException(err, fallbackMessage, fallbackCode, fallbackStatus);
 }
 
+/**
+ * Controller object for handling venue-related HTTP requests.
+ * @namespace VenuesController
+ */
 const VenuesController = {
+  /**
+   * Handles GET request to list all venues.
+   * @async
+   * @param {Object} _req - Express request object (unused)
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with venues array
+   */
   async getAllVenues(_req, res, next) {
     try {
       const venues = await listVenues();
@@ -52,6 +87,16 @@ const VenuesController = {
     }
   },
 
+  /**
+   * Handles GET request to retrieve a venue by ID.
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.id - Venue ID
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with venue object
+   */
   async getVenueById(req, res, next) {
     try {
       const venue = await getVenueById(req.params.id);
@@ -61,6 +106,15 @@ const VenuesController = {
     }
   },
 
+  /**
+   * Handles POST request to create a new venue.
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.body - Venue data
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with created venue (201 Created)
+   */
   async createVenue(req, res, next) {
     try {
       const venue = await createVenue(req.body);
@@ -70,6 +124,17 @@ const VenuesController = {
     }
   },
 
+  /**
+   * Handles PUT request to update an existing venue.
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.id - Venue ID
+   * @param {Object} req.body - Updated venue data
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with updated venue
+   */
   async updateVenue(req, res, next) {
     try {
       const venue = await updateVenue(req.params.id, req.body);
@@ -79,6 +144,16 @@ const VenuesController = {
     }
   },
 
+  /**
+   * Handles DELETE request to remove a venue.
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.id - Venue ID
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response confirming deletion
+   */
   async deleteVenue(req, res, next) {
     try {
       await deleteVenue(req.params.id);
@@ -92,6 +167,18 @@ const VenuesController = {
     }
   },
 
+  /**
+   * Handles POST request to import venues from API-Football.
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} [req.body] - Request body
+   * @param {number} [req.body.id] - Venue ID to import
+   * @param {Object} [req.query] - Query parameters
+   * @param {number} [req.query.id] - Venue ID to import
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with import result
+   */
   async importVenuesFromApiFootball(req, res, next) {
     try {
       const payload = await importVenuesFromApi({ id: readRequestValue(req, 'id') });

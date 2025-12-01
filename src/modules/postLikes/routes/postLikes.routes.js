@@ -1,9 +1,20 @@
+/**
+ * @file Post Likes Routes
+ * @description Express router configuration for post like-related endpoints.
+ * Provides routes for toggling likes and retrieving like summaries.
+ * @module modules/postLikes/routes/postLikes
+ */
+
 import { Router } from 'express';
 import auth from '../../../common/authMiddleware.js';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import { postIdParamSchema } from '../../posts/validation/posts.validation.js';
 import PostLikesController from '../controllers/postLikes.controller.js';
 
+/**
+ * Express router instance for post likes endpoints.
+ * @type {Router}
+ */
 const router = Router();
 
 /**

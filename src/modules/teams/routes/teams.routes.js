@@ -1,8 +1,40 @@
+/**
+ * @fileoverview Teams Routes Configuration
+ * @description Định nghĩa các API routes cho Teams module.
+ * File này cấu hình Express routers cho cả public và private endpoints,
+ * bao gồm OpenAPI/Swagger documentation cho mỗi endpoint.
+ * 
+ * Public Routes (không cần authentication):
+ * - GET /api/teams - Lấy danh sách teams với phân trang
+ * - GET /api/teams/league/:leagueID - Lấy teams theo league
+ * - GET /api/teams/search - Tìm kiếm teams theo tên
+ * - GET /api/teams/popular - Lấy danh sách teams phổ biến
+ * - GET /api/teams/:id - Lấy thông tin chi tiết team
+ * - GET /api/teams/:teamId/stats/:leagueId/:season - Lấy thống kê team
+ * 
+ * Private Routes (yêu cầu authentication):
+ * - POST /api/teams - Tạo team mới
+ * - PUT /api/teams/:id - Cập nhật team
+ * - DELETE /api/teams/:id - Xóa team
+ * - POST /api/teams/import - Import teams từ API-Football
+ * 
+ * @module modules/teams/routes/teams.routes
+ * @requires express - Express framework
+ * @requires ../../../common/authMiddleware.js - JWT authentication middleware
+ * @requires ../controllers/teams.controller.js - Teams request handlers
+ * 
+ * @author KickOffHub Team
+ * @version 1.0.0
+ */
+
 import express from 'express';
 import auth from '../../../common/authMiddleware.js';
 import TeamsController from '../controllers/teams.controller.js';
 
+/** Router cho các endpoints công khai (không cần đăng nhập) */
 const publicRouter = express.Router();
+
+/** Router cho các endpoints riêng tư (yêu cầu JWT token) */
 const privateRouter = express.Router();
 
 /**

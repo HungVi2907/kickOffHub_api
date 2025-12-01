@@ -1,9 +1,20 @@
+/**
+ * @file Post Reports Routes
+ * @description Express router configuration for post report-related endpoints.
+ * Provides routes for users to report inappropriate posts for moderation.
+ * @module modules/postReports/routes/postReports
+ */
+
 import { Router } from 'express';
 import auth from '../../../common/authMiddleware.js';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import PostReportsController from '../controllers/postReports.controller.js';
 import { reportPostSchema } from '../validation/postReports.validation.js';
 
+/**
+ * Express router instance for post reports endpoints.
+ * @type {Router}
+ */
 const router = Router();
 
 /**

@@ -1,3 +1,10 @@
+/**
+ * @file League-Team-Season Routes
+ * @description Express router configuration for league-team-season endpoints.
+ *              Defines REST API routes for managing league-team-season relationships.
+ * @module modules/leagueTeamSeason/routes/leagueTeamSeason
+ */
+
 import { Router } from 'express';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import LeagueTeamSeasonController from '../controllers/leagueTeamSeason.controller.js';
@@ -7,6 +14,11 @@ import {
   listQuerySchema,
 } from '../validation/leagueTeamSeason.validation.js';
 
+/**
+ * Express router for league-team-season endpoints.
+ *
+ * @type {import('express').Router}
+ */
 const router = Router();
 
 /**

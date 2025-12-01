@@ -1,6 +1,17 @@
+/**
+ * @file Tags Routes
+ * @description Express router configuration for tag-related endpoints.
+ * Provides routes for listing available tags for forum post categorization.
+ * @module modules/tags/routes/tags
+ */
+
 import { Router } from 'express';
 import TagsController from '../controllers/tags.controller.js';
 
+/**
+ * Express router instance for tags endpoints.
+ * @type {Router}
+ */
 const router = Router();
 
 /**

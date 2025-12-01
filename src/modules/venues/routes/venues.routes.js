@@ -1,6 +1,17 @@
+/**
+ * @file Venues Routes
+ * @description Express router configuration for venue-related endpoints.
+ * Provides CRUD routes for venue management and API-Football import functionality.
+ * @module modules/venues/routes/venues
+ */
+
 import express from 'express';
 import VenuesController from '../controllers/venues.controller.js';
 
+/**
+ * Express router instance for venues endpoints.
+ * @type {express.Router}
+ */
 const router = express.Router();
 
 /**

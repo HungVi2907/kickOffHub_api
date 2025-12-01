@@ -1,3 +1,10 @@
+/**
+ * @file Player-Team-League-Season Routes
+ * @description Express router configuration for player-team-league-season endpoints.
+ *              Defines REST API routes for managing player-team-league-season relationships.
+ * @module modules/playerTeamLeagueSeason/routes/playerTeamLeagueSeason
+ */
+
 import { Router } from 'express';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import PlayerTeamLeagueSeasonController from '../controllers/playerTeamLeagueSeason.controller.js';
@@ -8,6 +15,11 @@ import {
   updateMappingSchema,
 } from '../validation/playerTeamLeagueSeason.validation.js';
 
+/**
+ * Express router for player-team-league-season endpoints.
+ *
+ * @type {import('express').Router}
+ */
 const router = Router();
 
 /**

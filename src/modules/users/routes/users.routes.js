@@ -1,3 +1,34 @@
+/**
+ * =============================================================================
+ * FILE: src/modules/users/routes/users.routes.js
+ * =============================================================================
+ * 
+ * @fileoverview Users API Routes
+ * 
+ * @description
+ * Định nghĩa Express routes cho Users endpoints.
+ * Bao gồm Swagger/OpenAPI documentation cho từng endpoint.
+ * 
+ * ## Endpoints:
+ * | Method | Path          | Description       | Auth |
+ * |--------|---------------|-------------------|------|
+ * | GET    | /profile      | Get current user  | Yes  |
+ * | GET    | /users        | List all users    | No   |
+ * | GET    | /users/:id    | Get user by ID    | No   |
+ * | POST   | /users        | Create user       | No   |
+ * | PUT    | /users/:id    | Update user       | No   |
+ * | DELETE | /users/:id    | Delete user       | No   |
+ * 
+ * @module modules/users/routes/users.routes
+ * @requires express
+ * @requires common/authMiddleware
+ * @requires middlewares/validateSchema
+ * @requires modules/users/controllers/users.controller
+ * @requires modules/users/validation/users.validation
+ * 
+ * =============================================================================
+ */
+
 import { Router } from 'express';
 import auth from '../../../common/authMiddleware.js';
 import { validateSchema } from '../../../middlewares/validateSchema.js';

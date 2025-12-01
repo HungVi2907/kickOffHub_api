@@ -1,3 +1,32 @@
+/**
+ * @fileoverview Posts Routes - Định nghĩa HTTP routes cho Posts API
+ * 
+ * File này định nghĩa tất cả routes cho Posts module, bao gồm:
+ * - Public routes: Không yêu cầu authentication (list, detail)
+ * - Private routes: Yêu cầu JWT authentication (create, update, delete)
+ * 
+ * Tất cả routes đều có OpenAPI/Swagger documentation để tự động generate API docs.
+ * 
+ * Routes:
+ * - GET    /api/posts      - Lấy danh sách bài viết (public)
+ * - GET    /api/posts/:id  - Lấy chi tiết bài viết (public)
+ * - POST   /api/posts      - Tạo bài viết mới (private)
+ * - PATCH  /api/posts/:id  - Cập nhật bài viết (private)
+ * - DELETE /api/posts/:id  - Xóa bài viết (private)
+ * 
+ * @module modules/posts/routes/posts.routes
+ * @requires express - Express framework
+ * @requires ../../../common/authMiddleware.js - JWT authentication middleware
+ * @requires ../../../common/uploadMiddleware.js - Multer image upload middleware
+ * @requires ../../../middlewares/normalizeFormData.js - JSON field parser for multipart
+ * @requires ../../../middlewares/validateSchema.js - Zod schema validation middleware
+ * @requires ../controllers/posts.controller.js - Request handlers
+ * @requires ../validation/posts.validation.js - Zod validation schemas
+ * 
+ * @author KickOffHub Team
+ * @version 1.0.0
+ */
+
 import express from 'express';
 import auth from '../../../common/authMiddleware.js';
 import { handlePostImageUpload } from '../../../common/uploadMiddleware.js';
@@ -10,14 +39,33 @@ import {
   updatePostSchema,
 } from '../validation/posts.validation.js';
 
+/**
+ * Router cho các endpoints công khai (không cần auth)
+ * @type {express.Router}
+ */
 const publicRouter = express.Router();
+
+/**
+ * Router cho các endpoints yêu cầu authentication
+ * @type {express.Router}
+ */
 const privateRouter = express.Router();
 
+/**
+ * Middleware logging để debug routes
+ * Log method và URL của mỗi request
+ * 
+ * @function logPostRoute
+ * @param {express.Request} req - Express request
+ * @param {express.Response} _res - Express response (unused)
+ * @param {express.NextFunction} next - Next middleware
+ */
 const logPostRoute = (req, _res, next) => {
   console.log('POST ROUTE HIT:', req.method, req.originalUrl);
   next();
 };
 
+// Áp dụng logging middleware cho cả 2 routers
 publicRouter.use(logPostRoute);
 privateRouter.use(logPostRoute);
 

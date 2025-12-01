@@ -1,3 +1,11 @@
+/**
+ * @file Seasons Routes
+ * @description Defines Express routes for season management endpoints.
+ * Includes endpoints for listing, creating, and deleting seasons.
+ * All routes are prefixed with /api/seasons when mounted.
+ * @module modules/seasons/routes/seasons
+ */
+
 import { Router } from 'express';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
 import SeasonsController from '../controllers/seasons.controller.js';
@@ -6,6 +14,10 @@ import {
   deleteSeasonSchema,
 } from '../validation/seasons.validation.js';
 
+/**
+ * Express router instance for seasons endpoints.
+ * @type {import('express').Router}
+ */
 const router = Router();
 
 /**

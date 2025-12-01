@@ -1,3 +1,32 @@
+/**
+ * @fileoverview Comments Routes Configuration
+ * @module modules/comments/routes/comments
+ * @description Định nghĩa các API routes cho Comments module.
+ *              Bao gồm endpoints cho tạo và xóa bình luận trên bài viết.
+ *              Tất cả routes đều yêu cầu authentication.
+ *
+ * @requires express - Express.js framework
+ * @requires ../../../common/authMiddleware.js - JWT authentication middleware
+ * @requires ../../../middlewares/commentRateLimiter.js - Rate limiting cho comment creation
+ * @requires ../../../middlewares/validateSchema.js - Request validation middleware
+ * @requires ../controllers/comments.controller.js - Request handlers
+ * @requires ../validation/comments.validation.js - Zod validation schemas
+ *
+ * @author KickOffHub Team
+ * @version 1.0.0
+ *
+ * @description
+ * Available Endpoints:
+ * - POST   /api/posts/:postId/comments           - Tạo comment mới (rate limited)
+ * - DELETE /api/posts/:postId/comments/:commentId - Xóa comment (chỉ tác giả)
+ *
+ * Middleware Stack:
+ * 1. auth - Xác thực JWT token
+ * 2. validateSchema - Validate request params/body
+ * 3. commentRateLimiter - Giới hạn số comment/thời gian (chỉ POST)
+ * 4. Controller handler - Xử lý business logic
+ */
+
 import express from 'express';
 import auth from '../../../common/authMiddleware.js';
 import commentRateLimiter from '../../../middlewares/commentRateLimiter.js';
@@ -8,6 +37,10 @@ import {
   deleteCommentSchema,
 } from '../validation/comments.validation.js';
 
+/**
+ * Express Router instance cho authenticated comments routes.
+ * @type {import('express').Router}
+ */
 const privateRouter = express.Router();
 
 /**

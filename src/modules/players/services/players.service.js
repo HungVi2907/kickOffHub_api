@@ -1,3 +1,39 @@
+/**
+ * =============================================================================
+ * FILE: src/modules/players/services/players.service.js
+ * =============================================================================
+ * 
+ * @fileoverview Players Business Logic Service
+ * 
+ * @description
+ * Service layer xử lý business logic cho Players.
+ * Bao gồm CRUD, search, pagination, API-Football integration và statistics.
+ * 
+ * ## Features:
+ * - Player CRUD operations với validation
+ * - Paginated listing với filters
+ * - Search by name (case-insensitive)
+ * - Popular players filtering
+ * - Import từ API-Football
+ * - Player statistics từ API
+ * 
+ * ## Dependencies:
+ * - apiFootball service: External API client
+ * - playerTeamLeagueSeason service: Relationship management
+ * 
+ * ## Error Handling:
+ * - PlayersServiceError với custom status codes
+ * - Pagination validation
+ * - Field validation cho create/update
+ * 
+ * @module modules/players/services/players.service
+ * @requires sequelize
+ * @requires modules/countries/models/country.model
+ * @requires modules/players/repositories/players.repository
+ * 
+ * =============================================================================
+ */
+
 import sequelize from '../../../common/db.js';
 import Country from '../../countries/models/country.model.js';
 import {
@@ -11,6 +47,14 @@ import {
   buildNameSearchCondition,
 } from '../repositories/players.repository.js';
 
+// =============================================================================
+// Constants
+// =============================================================================
+
+/**
+ * Attributes để select từ Player model.
+ * @constant {string[]}
+ */
 const PLAYER_ATTRIBUTES = [
   'id',
   'name',
