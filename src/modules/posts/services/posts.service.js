@@ -1,9 +1,9 @@
 import {
-  createPresignedGetUrl,
+  createImageUrl,
   buildPostImageKey,
-  uploadBufferToS3,
-  deleteObjectFromS3,
-} from '../../../utils/s3Urls.js';
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from '../../../utils/cloudinaryMedia.js';
 import { redisClient } from '../../../common/redisClient.js';
 import {
   createPost,
@@ -29,7 +29,7 @@ async function mapPostToResponse(postInstance) {
 
   const plain = postInstance.get({ plain: true });
   const { image_key: imageKey, ...rest } = plain;
-  const imageUrl = await createPresignedGetUrl(imageKey);
+  const imageUrl = createImageUrl(imageKey);
 
   return {
     ...rest,
@@ -124,7 +124,7 @@ export async function createPostWithImage(userId, body, file) {
   if (file) {
     const key = buildPostImageKey(post.id, file.originalname || 'post.jpg');
     try {
-      await uploadBufferToS3(key, file.buffer, file.mimetype);
+      await uploadBufferToCloudinary(key, file.buffer, file.mimetype);
       post.image_key = key;
       await post.save();
     } catch (err) {
@@ -154,15 +154,15 @@ export async function updatePostWithImage(postIdRaw, body, file) {
   let newImageKey = post.image_key;
 
   if (body.removeImage) {
-    await deleteObjectFromS3(post.image_key);
+    await deleteFromCloudinary(post.image_key);
     newImageKey = null;
   }
 
   if (file) {
     const key = buildPostImageKey(post.id, file.originalname || 'post.jpg');
-    await uploadBufferToS3(key, file.buffer, file.mimetype);
+    await uploadBufferToCloudinary(key, file.buffer, file.mimetype);
     if (newImageKey && newImageKey !== key) {
-      await deleteObjectFromS3(newImageKey);
+      await deleteFromCloudinary(newImageKey);
     }
     newImageKey = key;
   }
@@ -182,7 +182,7 @@ export async function removePost(postIdRaw) {
   }
 
   if (post.image_key) {
-    await deleteObjectFromS3(post.image_key);
+    await deleteFromCloudinary(post.image_key);
   }
 
   await deletePost(post);
