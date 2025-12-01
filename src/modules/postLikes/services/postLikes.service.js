@@ -13,6 +13,7 @@ import {
   findLikeByUser,
 } from '../repositories/postLikes.repository.js';
 import { findPostById } from '../../posts/repositories/posts.repository.js';
+import { invalidatePostsCache } from '../../posts/services/posts.service.js';
 
 /**
  * Normalizes and validates a post ID from raw input.
@@ -88,6 +89,9 @@ export async function toggleLike(postIdRaw, userId) {
     }
   }
 
+  // Invalidate posts list cache since likeCount changed
+  await invalidatePostsCache();
+
   const likeCount = await countLikes(postId);
   return { liked, likeCount };
 }
@@ -117,6 +121,8 @@ export async function addLike(postIdRaw, userId) {
   if (!existing) {
     try {
       await createLike(postId, userId);
+      // Invalidate posts list cache since likeCount changed
+      await invalidatePostsCache();
     } catch (err) {
       if (!(err instanceof UniqueConstraintError)) {
         throw err;
@@ -153,6 +159,8 @@ export async function removeLike(postIdRaw, userId) {
   const existing = await findLikeByUser(postId, userId);
   if (existing) {
     await deleteLike(existing);
+    // Invalidate posts list cache since likeCount changed
+    await invalidatePostsCache();
   }
 
   const likeCount = await countLikes(postId);

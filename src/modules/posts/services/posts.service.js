@@ -30,6 +30,10 @@ import {
   findPostById,
   updatePost,
 } from '../repositories/posts.repository.js';
+import {
+  countLikes,
+  findLikeByUser,
+} from '../../postLikes/repositories/postLikes.repository.js';
 
 /**
  * @constant {number} DEFAULT_PAGE - Trang mặc định khi không chỉ định
@@ -140,12 +144,11 @@ async function mapPostCollectionToResponse(collection) {
  * Được gọi khi có thay đổi (create, update, delete) để đảm bảo
  * dữ liệu cache luôn đồng bộ với database.
  * 
- * @private
  * @async
- * @function invalidateCache
+ * @function invalidatePostsCache
  * @returns {Promise<void>}
  */
-async function invalidateCache() {
+export async function invalidatePostsCache() {
   // Kiểm tra Redis connection
   if (!redisClient.isOpen) {
     return;
@@ -270,22 +273,27 @@ export async function listPosts(pageRaw, limitRaw, sort, filters = {}) {
 /**
  * Lấy chi tiết một bài viết theo ID
  * 
+ * Bao gồm thông tin like:
+ * - likeCount: Tổng số lượt thích
+ * - isLikedByCurrentUser: User hiện tại đã thích bài viết hay chưa (nếu đã đăng nhập)
+ * 
  * @async
  * @function getPostById
  * @param {string|number} idRaw - ID bài viết (raw input)
+ * @param {number|null} [userId=null] - ID của user đang đăng nhập (optional)
  * @returns {Promise<Object|null>} Post object hoặc null nếu không tìm thấy
  * @throws {Error} 'INVALID_ID' nếu ID không hợp lệ
  * 
  * @example
- * try {
- *   const post = await getPostById('123');
- * } catch (err) {
- *   if (err.message === 'INVALID_ID') {
- *     // Handle invalid ID
- *   }
- * }
+ * // Không có user đăng nhập
+ * const post = await getPostById('123');
+ * // { id: 123, ..., likeCount: 5, isLikedByCurrentUser: false }
+ * 
+ * // Có user đăng nhập
+ * const post = await getPostById('123', 1);
+ * // { id: 123, ..., likeCount: 5, isLikedByCurrentUser: true }
  */
-export async function getPostById(idRaw) {
+export async function getPostById(idRaw, userId = null) {
   // Parse và validate ID
   const id = Number.parseInt(idRaw, 10);
   if (!Number.isInteger(id) || id < 1) {
@@ -293,7 +301,28 @@ export async function getPostById(idRaw) {
   }
 
   const post = await findPostById(id);
-  return mapPostToResponse(post);
+  if (!post) {
+    return null;
+  }
+  
+  // Transform post to response format
+  const postResponse = await mapPostToResponse(post);
+  
+  // Lấy thông tin like
+  const likeCount = await countLikes(id);
+  
+  // Check xem user đã like bài viết chưa (nếu có userId)
+  let isLikedByCurrentUser = false;
+  if (userId) {
+    const existingLike = await findLikeByUser(id, userId);
+    isLikedByCurrentUser = !!existingLike;
+  }
+  
+  return {
+    ...postResponse,
+    likeCount,
+    isLikedByCurrentUser,
+  };
 }
 
 /**
@@ -380,7 +409,7 @@ export async function createPostWithImage(userId, body, file) {
   }
 
   // Bước 3: Invalidate cache và trả về kết quả
-  await invalidateCache();
+  await invalidatePostsCache();
   const fullPost = await findPostById(post.id);
   return mapPostToResponse(fullPost);
 }
@@ -454,7 +483,7 @@ export async function updatePostWithImage(postIdRaw, body, file) {
 
   // Thực hiện update
   const updated = await updatePost(post, updates);
-  await invalidateCache();
+  await invalidatePostsCache();
   
   // Reload để có đầy đủ relations
   const refreshed = await findPostById(updated.id);
@@ -493,6 +522,6 @@ export async function removePost(postIdRaw) {
 
   // Xóa post và invalidate cache
   await deletePost(post);
-  await invalidateCache();
+  await invalidatePostsCache();
   return true;
 }

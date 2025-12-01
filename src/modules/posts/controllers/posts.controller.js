@@ -127,18 +127,22 @@ const PostsController = {
    * @param {express.Request} req - Express request object
    * @param {Object} req.params - Route parameters
    * @param {string} req.params.id - ID của bài viết
+   * @param {Object} [req.user] - User object nếu đã đăng nhập (từ optionalAuth middleware)
+   * @param {number} [req.user.id] - ID của user đang đăng nhập
    * @param {express.Response} res - Express response object
    * @param {express.NextFunction} next - Express next middleware
-   * @returns {Promise<void>} JSON response với post detail
+   * @returns {Promise<void>} JSON response với post detail, bao gồm likeCount và isLikedByCurrentUser
    * @throws {NotFoundException} Nếu post không tồn tại
    * 
    * @example
    * // GET /api/posts/123
-   * // Response: { success: true, data: { id, title, content, ... } }
+   * // Response: { success: true, data: { id, title, content, likeCount, isLikedByCurrentUser, ... } }
    */
   async detail(req, res, next) {
     try {
-      const post = await getPostById(req.params.id);
+      // Truyền userId để service có thể check isLikedByCurrentUser
+      const userId = req.user?.id || null;
+      const post = await getPostById(req.params.id, userId);
       
       // Throw NotFoundException nếu không tìm thấy
       if (!post) {

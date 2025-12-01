@@ -28,7 +28,7 @@
  */
 
 import express from 'express';
-import auth from '../../../common/authMiddleware.js';
+import auth, { optionalAuth } from '../../../common/authMiddleware.js';
 import { handlePostImageUpload } from '../../../common/uploadMiddleware.js';
 import { parseJsonFields } from '../../../middlewares/normalizeFormData.js';
 import { validateSchema } from '../../../middlewares/validateSchema.js';
@@ -251,7 +251,7 @@ publicRouter.get('/posts', PostsController.list);
  *               message: "Internal Server Error"
  *               data: null
  */
-publicRouter.get('/posts/:id', validateSchema(postIdParamSchema), PostsController.detail);
+publicRouter.get('/posts/:id', optionalAuth, validateSchema(postIdParamSchema), PostsController.detail);
 
 /**
  * @openapi

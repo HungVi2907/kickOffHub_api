@@ -76,20 +76,20 @@ export async function findPaginatedPosts({ page, limit, sort, search, tag, statu
 
   // Determine order based on sort parameter
   let order;
-  let attributes;
   let subQuery;
+
+  // Always include likeCount for consistent display across list and detail views
+  const attributes = {
+    include: [
+      [
+        literal('(SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = Post.id)'),
+        'likeCount'
+      ]
+    ]
+  };
 
   if (sort === 'likes') {
     // Sort by like count descending, then by created_at descending
-    // Use subquery to count likes for each post
-    attributes = {
-      include: [
-        [
-          literal('(SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = Post.id)'),
-          'likeCount'
-        ]
-      ]
-    };
     order = [[literal('likeCount'), 'DESC'], ['created_at', 'DESC']];
     subQuery = false;
   } else {

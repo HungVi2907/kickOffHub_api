@@ -22,11 +22,16 @@
  * 
  * ## Cách sử dụng:
  * ```javascript
- * import auth from './common/authMiddleware.js';
+ * import auth, { optionalAuth } from './common/authMiddleware.js';
  * 
- * // Protected route
+ * // Protected route (yêu cầu authentication)
  * router.get('/profile', auth, (req, res) => {
  *   const user = req.user;  // User đã được authenticate
+ * });
+ * 
+ * // Public route với optional user context
+ * router.get('/posts/:id', optionalAuth, (req, res) => {
+ *   const user = req.user;  // User nếu có token, undefined nếu không
  * });
  * ```
  * 
@@ -137,4 +142,63 @@ export default async function authMiddleware(req, _res, next) {
         : new AuthException('Token không hợp lệ hoặc hết hạn', 'AUTH_TOKEN_EXPIRED')
     );
   }
+}
+
+/**
+ * Optional JWT Authentication Middleware
+ * 
+ * @async
+ * @function optionalAuth
+ * @description
+ * Middleware xác thực Bearer token nếu có, nhưng không yêu cầu bắt buộc.
+ * Hữu ích cho public routes cần biết user đang đăng nhập (nếu có).
+ * 
+ * ## Khác biệt với authMiddleware:
+ * - authMiddleware: Yêu cầu token, throw error nếu không có
+ * - optionalAuth: Không yêu cầu token, chỉ attach user nếu token hợp lệ
+ * 
+ * ## Use cases:
+ * - Post detail: Hiển thị isLikedByCurrentUser nếu user đăng nhập
+ * - Comments: Hiển thị nút edit/delete cho owner
+ * 
+ * @param {Request} req - Express request object
+ * @param {Response} _res - Express response object (không sử dụng)
+ * @param {Function} next - Next middleware function
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * import { optionalAuth } from './common/authMiddleware.js';
+ * 
+ * // Public route với optional user context
+ * router.get('/posts/:id', optionalAuth, (req, res) => {
+ *   if (req.user) {
+ *     // User đã đăng nhập
+ *   } else {
+ *     // Guest user
+ *   }
+ * });
+ */
+export async function optionalAuth(req, _res, next) {
+  const authHeader = req.headers.authorization;
+  
+  // Không có header hoặc sai format → tiếp tục mà không có user
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+  
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+    
+    // Attach user nếu tìm thấy, null nếu không
+    req.user = user || null;
+  } catch {
+    // Token không hợp lệ → tiếp tục như guest
+    req.user = null;
+  }
+  
+  next();
 }
