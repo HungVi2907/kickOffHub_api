@@ -96,8 +96,17 @@ async function mapPostToResponse(postInstance) {
   // Destructure để tách image_key, giữ lại các field khác
   const { image_key: imageKey, ...rest } = plain;
   
-  // Tạo full URL từ Cloudinary key
-  const imageUrl = createImageUrl(imageKey);
+  // Xử lý image URL:
+  // - Nếu imageKey đã là full URL (https://...) thì giữ nguyên
+  // - Nếu là key thì tạo URL từ Cloudinary
+  let imageUrl = null;
+  if (imageKey) {
+    if (imageKey.startsWith('http://') || imageKey.startsWith('https://')) {
+      imageUrl = imageKey; // Đã là full URL
+    } else {
+      imageUrl = createImageUrl(imageKey); // Tạo URL từ key
+    }
+  }
 
   return {
     ...rest,
@@ -295,14 +304,22 @@ export async function createPostWithImage(userId, body, file) {
     content: body.content,
     status: body.status || 'public',
     tags: Array.isArray(body.tags) ? body.tags : undefined,
-    image_key: null, // Sẽ update sau khi upload
+    image_key: null, // Sẽ update sau khi upload hoặc từ imageUrl
   };
+
+  // Case 1: Frontend đã upload ảnh trước và gửi imageUrl (Cloudinary URL)
+  // Hỗ trợ cả imageUrl (camelCase) và image_url (snake_case)
+  const imageUrl = body.imageUrl || body.image_url;
+  if (imageUrl && typeof imageUrl === 'string') {
+    // Lưu trực tiếp URL vào image_key (sẽ được transform trong mapPostToResponse)
+    payload.image_key = imageUrl;
+  }
 
   // Bước 1: Tạo post record
   const post = await createPost(payload);
 
-  // Bước 2: Upload image nếu có
-  if (file) {
+  // Case 2: Upload image qua multer file (legacy flow)
+  if (file && !imageUrl) {
     // Tạo unique key cho Cloudinary
     const key = buildPostImageKey(post.id, file.originalname || 'post.jpg');
     try {
