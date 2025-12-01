@@ -70,7 +70,7 @@ app.use(cookieParser());
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 60,
+  max: 200, // Tăng từ 60 lên 200 requests/phút để hỗ trợ React Strict Mode
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -114,6 +114,7 @@ if (moduleManifests.length) {
   app.use('/api', modularRouter);
 }
 // =====================================================
+
 app.get('/healthz', (_req, res) => {
   return ApiResponse.success(res, { status: 'ok' }, 'Service healthy');
 });
