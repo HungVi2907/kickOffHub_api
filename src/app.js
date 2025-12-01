@@ -20,6 +20,9 @@ import loadModules from './bootstrap/moduleLoader.js';
 import buildHttpRouter from './pipelines/httpRouter.js';
 import runModuleTasks from './pipelines/jobScheduler.js';
 
+import uploadRoutes from "./modules/upload/upload.routes.js";
+
+app.use("/api/upload", uploadRoutes);
 
 const app = express();
 const container = createContainer();
