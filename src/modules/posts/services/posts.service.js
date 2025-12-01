@@ -297,6 +297,11 @@ export async function getPostById(idRaw) {
  * );
  */
 export async function createPostWithImage(userId, body, file) {
+  // Debug log
+  console.log('📝 createPostWithImage called');
+  console.log('📝 body:', JSON.stringify(body, null, 2));
+  console.log('📝 file:', file ? 'has file' : 'no file');
+
   // Chuẩn bị payload để tạo post
   const payload = {
     user_id: userId,
@@ -310,13 +315,19 @@ export async function createPostWithImage(userId, body, file) {
   // Case 1: Frontend đã upload ảnh trước và gửi imageUrl (Cloudinary URL)
   // Hỗ trợ cả imageUrl (camelCase) và image_url (snake_case)
   const imageUrl = body.imageUrl || body.image_url;
+  console.log('📝 imageUrl from body:', imageUrl);
+  
   if (imageUrl && typeof imageUrl === 'string') {
     // Lưu trực tiếp URL vào image_key (sẽ được transform trong mapPostToResponse)
     payload.image_key = imageUrl;
+    console.log('📝 Setting payload.image_key to:', imageUrl);
   }
+
+  console.log('📝 Final payload:', JSON.stringify(payload, null, 2));
 
   // Bước 1: Tạo post record
   const post = await createPost(payload);
+  console.log('📝 Post created with id:', post.id, 'image_key:', post.image_key);
 
   // Case 2: Upload image qua multer file (legacy flow)
   if (file && !imageUrl) {
