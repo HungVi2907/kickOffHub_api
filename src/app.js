@@ -76,16 +76,22 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin(origin, callback) {
+    // Allow no-origin (curl, postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
 
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Do NOT throw - will crash app
     logger.warn({ origin }, "Blocked by CORS");
-    return callback(new Error("Not allowed by CORS"));
+    return callback(null, false); 
   },
   credentials: true,
   methods: "GET,POST,PUT,DELETE,OPTIONS",
   allowedHeaders: "Content-Type, Authorization",
 };
+
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
