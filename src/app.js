@@ -69,9 +69,6 @@ import loadModules from './bootstrap/moduleLoader.js';
 import buildHttpRouter from './pipelines/httpRouter.js';
 import runModuleTasks from './pipelines/jobScheduler.js';
 
-import uploadRoutes from "./modules/upload/upload.routes.js";
-
-app.use("/api/upload", uploadRoutes);
 
 /**
  * Express application instance
@@ -306,6 +303,11 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 if (moduleManifests.length) {
   app.use('/api', modularRouter);
 }
+
+import uploadRoutes from "./modules/upload/upload.routes.js";
+
+app.use("/api/upload", uploadRoutes);
+
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS
