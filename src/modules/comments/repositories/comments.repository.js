@@ -91,7 +91,7 @@ export function findCommentByIdentity({ commentId, postId }) {
  */
 export function findCommentWithAuthor(id) {
   return Comment.findByPk(id, {
-    include: [{ model: User, as: 'author', attributes: ['id', 'name', 'email'] }],
+    include: [{ model: User, as: 'author', attributes: ['id', 'name', 'username'] }],
   });
 }
 

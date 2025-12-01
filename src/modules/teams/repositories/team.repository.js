@@ -20,7 +20,7 @@ import Team from '../models/team.model.js';
  * @constant {string[]}
  * @description Chỉ lấy các trường cần thiết để tối ưu performance
  */
-const TEAM_ATTRIBUTES = ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'created_at', 'updated_at'];
+const TEAM_ATTRIBUTES = ['id', 'name', 'code', 'country', 'founded', 'national', 'logo', 'venue_id', 'isPopular', 'created_at', 'updated_at'];
 
 /**
  * Lấy danh sách teams với phân trang

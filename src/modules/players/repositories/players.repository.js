@@ -26,6 +26,10 @@ export function deletePlayer(id) {
   return Player.destroy({ where: { id } });
 }
 
+export function countPlayers() {
+  return Player.count();
+}
+
 export function bulkUpsertPlayers(payloads) {
   return Player.bulkCreate(payloads, {
     updateOnDuplicate: [

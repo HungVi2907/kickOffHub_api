@@ -18,7 +18,7 @@
  */
 
 import ApiResponse from '../../../common/response.js';
-import { AppException, NotFoundException, ValidationException } from '../../../common/exceptions/index.js';
+import { AppException, ForbiddenException, NotFoundException, ValidationException } from '../../../common/exceptions/index.js';
 import toAppException from '../../../common/controllerError.js';
 import {
   createPostWithImage,
@@ -27,6 +27,7 @@ import {
   removePost,
   updatePostWithImage,
 } from '../services/posts.service.js';
+import { findPostById } from '../repositories/posts.repository.js';
 
 /**
  * Chuyển đổi error thành AppException phù hợp
@@ -90,15 +91,26 @@ const PostsController = {
    * @example
    * // GET /api/posts?page=2&limit=20
    * // Response: { success: true, data: { total, page, pageSize, data: [...] } }
+   * 
+   * // GET /api/posts?search=tactics&tag=premier&status=public&sort=likes
+   * // Filtered and sorted response
    */
   async list(req, res, next) {
     try {
       // Lấy params từ query string
       const page = req.query.page;
       const limit = req.query.limit;
+      const sort = req.query.sort; // 'likes' or 'newest' (default)
       
-      // Gọi service để lấy dữ liệu
-      const payload = await listPosts(page, limit);
+      // Extract filter parameters
+      const filters = {
+        search: req.query.search,
+        tag: req.query.tag,
+        status: req.query.status,
+      };
+      
+      // Gọi service để lấy dữ liệu với filters
+      const payload = await listPosts(page, limit, sort, filters);
       
       return ApiResponse.success(res, payload, 'Posts retrieved');
     } catch (err) {
@@ -202,12 +214,18 @@ const PostsController = {
    */
   async update(req, res, next) {
     try {
-      const post = await updatePostWithImage(req.params.id, req.body, req.file);
-      
-      // Throw NotFoundException nếu không tìm thấy
-      if (!post) {
+      // First check if post exists and user owns it
+      const existingPost = await findPostById(req.params.id);
+      if (!existingPost) {
         throw new NotFoundException('Post not found', 'POST_NOT_FOUND');
       }
+      
+      // Authorization check: only post owner can update
+      if (existingPost.user_id !== req.user.id) {
+        throw new ForbiddenException('You can only edit your own posts', 'POST_UPDATE_FORBIDDEN');
+      }
+      
+      const post = await updatePostWithImage(req.params.id, req.body, req.file);
       
       return ApiResponse.success(res, post, 'Post updated');
     } catch (err) {
@@ -237,12 +255,18 @@ const PostsController = {
    */
   async remove(req, res, next) {
     try {
-      const deleted = await removePost(req.params.id);
-      
-      // Throw NotFoundException nếu không tìm thấy
-      if (!deleted) {
+      // First check if post exists and user owns it
+      const existingPost = await findPostById(req.params.id);
+      if (!existingPost) {
         throw new NotFoundException('Post not found', 'POST_NOT_FOUND');
       }
+      
+      // Authorization check: only post owner can delete
+      if (existingPost.user_id !== req.user.id) {
+        throw new ForbiddenException('You can only delete your own posts', 'POST_DELETE_FORBIDDEN');
+      }
+      
+      await removePost(req.params.id);
       
       // Trả về ID của post đã xóa
       return ApiResponse.success(

@@ -8,7 +8,7 @@
 import ApiResponse from '../../../common/response.js';
 import { AppException } from '../../../common/exceptions/index.js';
 import toAppException from '../../../common/controllerError.js';
-import { getLikeSummary, toggleLike } from '../services/postLikes.service.js';
+import { getLikeSummary, toggleLike, addLike, removeLike } from '../services/postLikes.service.js';
 
 /**
  * Maps errors from the post likes service to AppException instances.
@@ -77,6 +77,50 @@ class PostLikesController {
       return ApiResponse.success(res, result, 'Post like summary');
     } catch (err) {
       next(mapPostLikesError(err, 'Unable to retrieve like summary', 'POST_LIKE_SUMMARY_FAILED'));
+    }
+  }
+
+  /**
+   * Handles POST request to add a like to a post.
+   * @static
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.id - Post ID
+   * @param {Object} req.user - Authenticated user object
+   * @param {number} req.user.id - User ID
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with like result
+   */
+  static async add(req, res, next) {
+    try {
+      const result = await addLike(req.params.id, req.user?.id);
+      return ApiResponse.success(res, result, 'Post liked');
+    } catch (err) {
+      next(mapPostLikesError(err, 'Unable to like post', 'POST_LIKE_ADD_FAILED'));
+    }
+  }
+
+  /**
+   * Handles DELETE request to remove a like from a post.
+   * @static
+   * @async
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.id - Post ID
+   * @param {Object} req.user - Authenticated user object
+   * @param {number} req.user.id - User ID
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next middleware function
+   * @returns {Promise<void>} Sends JSON response with unlike result
+   */
+  static async remove(req, res, next) {
+    try {
+      const result = await removeLike(req.params.id, req.user?.id);
+      return ApiResponse.success(res, result, 'Post unliked');
+    } catch (err) {
+      next(mapPostLikesError(err, 'Unable to unlike post', 'POST_LIKE_REMOVE_FAILED'));
     }
   }
 }

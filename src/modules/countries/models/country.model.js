@@ -22,6 +22,7 @@ import sequelize from '../../../common/db.js';
  * @property {string} name - Tên quốc gia (bắt buộc, duy nhất)
  * @property {string|null} code - Mã ISO quốc gia (tối đa 10 ký tự, ví dụ: 'VN', 'ENG')
  * @property {string|null} flag - URL hình ảnh cờ quốc gia
+ * @property {boolean} is_popular - Đánh dấu quốc gia nổi bật (mặc định: false)
  * @property {Date} created_at - Thời điểm tạo bản ghi
  * @property {Date} updated_at - Thời điểm cập nhật bản ghi gần nhất
  */
@@ -86,6 +87,16 @@ const Country = sequelize.define(
     flag: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    /**
+     * Đánh dấu quốc gia nổi bật/phổ biến
+     * Sử dụng để lọc và hiển thị các quốc gia được quan tâm nhiều
+     * @type {boolean}
+     */
+    is_popular: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
   {

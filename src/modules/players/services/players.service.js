@@ -38,6 +38,7 @@ import sequelize from '../../../common/db.js';
 import Country from '../../countries/models/country.model.js';
 import {
   bulkUpsertPlayers,
+  countPlayers,
   deletePlayer,
   findAndCountPlayers,
   findPlayerById,
@@ -240,8 +241,22 @@ async function fetchCountryByName(countryName) {
 
 export async function listPlayers(query) {
   const { pageNumber, limitNumber, offset } = parsePaginationParams(query);
+  
+  // Build where clause for optional nationality filter
+  const whereClause = {};
+  if (query.nationality && typeof query.nationality === 'string') {
+    const nationality = query.nationality.trim();
+    if (nationality) {
+      whereClause.nationality = sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('nationality')),
+        nationality.toLowerCase()
+      );
+    }
+  }
+
   const { rows, count } = await findAndCountPlayers({
     attributes: PLAYER_ATTRIBUTES,
+    where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
     order: [['name', 'ASC']],
     limit: limitNumber,
     offset,
@@ -529,4 +544,21 @@ export async function getPlayerStats(query = {}) {
   const { apiFootballGet } = ensureApiFootball();
   const data = await apiFootballGet('/players', params);
   return data;
+}
+
+/**
+ * Get the total count of players in the database.
+ * 
+ * @async
+ * @function getPlayersCount
+ * @returns {Promise<Object>} Object containing total count
+ * @returns {number} returns.total - Total number of players
+ * 
+ * @example
+ * const result = await getPlayersCount();
+ * console.log(result.total); // 8500
+ */
+export async function getPlayersCount() {
+  const total = await countPlayers();
+  return { total };
 }

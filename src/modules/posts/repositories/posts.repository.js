@@ -20,46 +20,110 @@
  * @version 1.0.0
  */
 
-import { Op } from 'sequelize';
+import { Op, fn, col, literal } from 'sequelize';
 import sequelize from '../../../common/db.js';
 import Post from '../models/post.model.js';
 import User from '../../users/models/user.model.js';
 import Comment from '../../comments/models/comment.model.js';
 import Tag from '../../tags/models/tag.model.js';
 import PostTag from '../models/postTag.model.js';
+import PostLike from '../../postLikes/models/postLike.model.js';
 
 /**
  * Lấy danh sách bài viết có phân trang
  * 
- * Query bao gồm thông tin author và tags, sắp xếp theo thời gian tạo mới nhất.
+ * Query bao gồm thông tin author và tags, sắp xếp theo thời gian tạo mới nhất
+ * hoặc theo số lượng likes (khi sort='likes').
+ * Hỗ trợ filter theo search (keyword), tag, và status.
  * 
  * @async
  * @function findPaginatedPosts
- * @param {Object} options - Tham số phân trang
+ * @param {Object} options - Tham số phân trang, sắp xếp và filter
  * @param {number} options.page - Số trang (bắt đầu từ 1)
  * @param {number} options.limit - Số bài viết mỗi trang
+ * @param {string} [options.sort] - Cách sắp xếp: 'likes' | 'newest' (default)
+ * @param {string} [options.search] - Từ khóa tìm kiếm trong title và content
+ * @param {string} [options.tag] - Tên tag để filter
+ * @param {string} [options.status] - Trạng thái: 'public' | 'draft'
  * @returns {Promise<{count: number, rows: Post[]}>} Kết quả findAndCountAll
  * @returns {number} returns.count - Tổng số bài viết
  * @returns {Post[]} returns.rows - Mảng bài viết của trang hiện tại
  * 
  * @example
- * const result = await findPaginatedPosts({ page: 1, limit: 10 });
+ * const result = await findPaginatedPosts({ page: 1, limit: 10, sort: 'likes', search: 'tactics' });
  * console.log(`Total: ${result.count}, Current page: ${result.rows.length}`);
  */
-export async function findPaginatedPosts({ page, limit }) {
+export async function findPaginatedPosts({ page, limit, sort, search, tag, status }) {
   // Tính offset dựa trên page (1-indexed)
   const offset = (page - 1) * limit;
 
+  // Build WHERE conditions
+  const whereConditions = {};
+
+  // Search filter: search in title and content
+  if (search && search.trim()) {
+    const searchTerm = `%${search.trim()}%`;
+    whereConditions[Op.or] = [
+      { title: { [Op.like]: searchTerm } },
+      { content: { [Op.like]: searchTerm } }
+    ];
+  }
+
+  // Status filter
+  if (status && status.trim() && status !== 'all') {
+    whereConditions.status = status.trim();
+  }
+
+  // Determine order based on sort parameter
+  let order;
+  let attributes;
+  let subQuery;
+
+  if (sort === 'likes') {
+    // Sort by like count descending, then by created_at descending
+    // Use subquery to count likes for each post
+    attributes = {
+      include: [
+        [
+          literal('(SELECT COUNT(*) FROM post_likes WHERE post_likes.post_id = Post.id)'),
+          'likeCount'
+        ]
+      ]
+    };
+    order = [[literal('likeCount'), 'DESC'], ['created_at', 'DESC']];
+    subQuery = false;
+  } else {
+    // Default: sort by created_at descending (newest first)
+    order = [['created_at', 'DESC']];
+  }
+
+  // Build tag include with optional filter
+  const tagInclude = {
+    model: Tag,
+    as: 'tags',
+    through: { attributes: [] }
+  };
+
+  // If tag filter is provided, add where condition to tag include
+  if (tag && tag.trim()) {
+    tagInclude.where = { name: { [Op.like]: `%${tag.trim()}%` } };
+    tagInclude.required = true; // INNER JOIN to filter posts by tag
+  }
+
   return Post.findAndCountAll({
+    attributes,
+    where: Object.keys(whereConditions).length > 0 ? whereConditions : undefined,
     include: [
-      // Include author với chỉ id và username để giảm payload
-      { model: User, as: 'author', attributes: ['id', 'username'] },
-      // Include tags, loại bỏ attributes của junction table
-      { model: Tag, as: 'tags', through: { attributes: [] } }
+      // Include author với id, name, và username để hiển thị
+      { model: User, as: 'author', attributes: ['id', 'name', 'username'] },
+      // Include tags với optional filter
+      tagInclude
     ],
-    order: [['created_at', 'DESC']], // Sắp xếp mới nhất lên đầu
+    order,
     limit,
     offset,
+    subQuery,
+    distinct: true, // Ensure accurate count with includes
   });
 }
 
@@ -83,15 +147,15 @@ export async function findPaginatedPosts({ page, limit }) {
 export async function findPostById(id) {
   return Post.findByPk(id, {
     include: [
-      // Author của bài viết
-      { model: User, as: 'author', attributes: ['id', 'username'] },
+      // Author của bài viết với đầy đủ thông tin
+      { model: User, as: 'author', attributes: ['id', 'name', 'username'] },
       // Danh sách tags đã gắn
       { model: Tag, as: 'tags', through: { attributes: [] } },
       {
         // Nested include: Comments với author của mỗi comment
         model: Comment,
         as: 'comments',
-        include: [{ model: User, as: 'author', attributes: ['id', 'username'] }]
+        include: [{ model: User, as: 'author', attributes: ['id', 'name', 'username'] }]
       }
     ]
   });

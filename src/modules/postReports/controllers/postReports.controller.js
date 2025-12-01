@@ -52,12 +52,17 @@ class PostReportsController {
    * @returns {Promise<void>} Sends JSON response with report result (201 Created)
    */
   static async report(req, res, next) {
-    try {
-      const result = await reportPost(req.params.id, req.user?.id, req.body.reason);
-      return ApiResponse.created(res, result, 'Report received');
-    } catch (err) {
-      next(mapPostReportsError(err, 'Unable to report post', 'POST_REPORT_FAILED'));
-    }
+    // TEMPORARILY DISABLED - Report feature is inactive
+    // Original implementation preserved below:
+    // try {
+    //   const result = await reportPost(req.params.id, req.user?.id, req.body.reason);
+    //   return ApiResponse.created(res, result, 'Report received');
+    // } catch (err) {
+    //   next(mapPostReportsError(err, 'Unable to report post', 'POST_REPORT_FAILED'));
+    // }
+    
+    // Return disabled message - no DB operations performed
+    return ApiResponse.success(res, null, 'The report feature is currently disabled.');
   }
 }
 

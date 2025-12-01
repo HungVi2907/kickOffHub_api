@@ -26,7 +26,9 @@ import {
   createCountry,
   deleteCountry,
   getCountryById,
+  getCountriesCount,
   listCountries,
+  listPopularCountries,
   searchCountriesByName,
   updateCountry,
 } from '../services/countries.service.js';
@@ -118,6 +120,30 @@ const CountriesController = {
   },
 
   /**
+   * Lấy danh sách các quốc gia nổi bật (is_popular = true).
+   * 
+   * @async
+   * @function popular
+   * @memberof CountriesController
+   * @param {import('express').Request} req - Express request object
+   * @param {import('express').Response} res - Express response object
+   * @param {import('express').NextFunction} next - Express next middleware
+   * @returns {Promise<void>} Trả về response với danh sách quốc gia nổi bật
+   * 
+   * @example
+   * // GET /api/countries/popular
+   * // Response: { success: true, data: { data: [...], total: 10 } }
+   */
+  async popular(req, res, next) {
+    try {
+      const payload = await listPopularCountries();
+      return ApiResponse.success(res, payload, 'Popular countries retrieved');
+    } catch (error) {
+      next(mapCountryError(error, 'Error retrieving popular countries', 'POPULAR_COUNTRIES_FAILED'));
+    }
+  },
+
+  /**
    * Lấy thông tin chi tiết của một quốc gia theo ID.
    * 
    * @async
@@ -199,6 +225,30 @@ const CountriesController = {
       return ApiResponse.success(res, country, 'Country updated');
     } catch (error) {
       next(mapCountryError(error, 'Error updating country', 'COUNTRY_UPDATE_FAILED'));
+    }
+  },
+
+  /**
+   * Get the total count of countries in the database.
+   * 
+   * @async
+   * @function count
+   * @memberof CountriesController
+   * @param {import('express').Request} req - Express request object
+   * @param {import('express').Response} res - Express response object
+   * @param {import('express').NextFunction} next - Express next middleware
+   * @returns {Promise<void>} Returns response with total count
+   * 
+   * @example
+   * // GET /api/countries/count
+   * // Response: { success: true, data: { total: 195 }, message: 'Countries count retrieved' }
+   */
+  async count(req, res, next) {
+    try {
+      const payload = await getCountriesCount();
+      return ApiResponse.success(res, payload, 'Countries count retrieved');
+    } catch (error) {
+      next(mapCountryError(error, 'Error retrieving countries count', 'COUNTRIES_COUNT_FAILED'));
     }
   },
 

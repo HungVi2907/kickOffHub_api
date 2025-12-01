@@ -11,6 +11,7 @@ import {
   listPopularPlayers,
   importPlayersFromApi,
   getPlayerStats,
+  getPlayersCount,
   PlayersServiceError,
 } from '../services/players.service.js';
 
@@ -120,6 +121,15 @@ class PlayersController {
       return ApiResponse.success(res, data, 'Player statistics retrieved successfully');
     } catch (error) {
       next(mapPlayersError(error, 'Error getting player statistics', 'PLAYER_STATS_FAILED'));
+    }
+  }
+
+  static async getCount(req, res, next) {
+    try {
+      const result = await getPlayersCount();
+      return ApiResponse.success(res, result, 'Players count retrieved successfully');
+    } catch (error) {
+      next(mapPlayersError(error, 'Error retrieving players count', 'PLAYERS_COUNT_FAILED'));
     }
   }
 }

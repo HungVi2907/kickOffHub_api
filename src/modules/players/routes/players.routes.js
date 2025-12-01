@@ -18,7 +18,7 @@ const router = express.Router();
  * /api/players:
  *   get:
  *     summary: List players
- *     description: Returns a paginated, alphabetically sorted player list. Supports `page` and `limit` query parameters to control pagination and avoid oversized responses.
+ *     description: Returns a paginated, alphabetically sorted player list. Supports `page`, `limit`, and `nationality` query parameters to control pagination and filtering.
  *     tags:
  *       - Players
  *     parameters:
@@ -37,6 +37,11 @@ const router = express.Router();
  *           maximum: 100
  *           default: 20
  *         description: Maximum number of records per page (capped at 100).
+ *       - in: query
+ *         name: nationality
+ *         schema:
+ *           type: string
+ *         description: Filter players by nationality (case-insensitive). Example - "Argentina", "Brazil", "England".
  *     responses:
  *       200:
  *         description: Players fetched successfully.
@@ -133,6 +138,57 @@ const router = express.Router();
  *               data: null
  */
 router.get('/players', playersController.getAllPlayers);
+
+/**
+ * @openapi
+ * /api/players/count:
+ *   get:
+ *     summary: Get players count
+ *     description: Returns the total number of players in the database.
+ *     tags:
+ *       - Players
+ *     responses:
+ *       200:
+ *         description: Players count retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *             example:
+ *               success: true
+ *               message: "Players count retrieved successfully"
+ *               data:
+ *                 total: 8500
+ *       500:
+ *         description: Internal server error while counting players.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   nullable: true
+ *             example:
+ *               success: false
+ *               message: "Error retrieving players count"
+ *               data: null
+ */
+router.get('/players/count', playersController.getCount);
 
 /**
  * @openapi

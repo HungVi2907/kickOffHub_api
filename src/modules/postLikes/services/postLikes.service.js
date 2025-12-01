@@ -93,6 +93,73 @@ export async function toggleLike(postIdRaw, userId) {
 }
 
 /**
+ * Adds a like to a post by the authenticated user.
+ * @async
+ * @function addLike
+ * @param {string|number} postIdRaw - Raw post ID value
+ * @param {number} userId - ID of the authenticated user
+ * @returns {Promise<Object>} Like result
+ * @returns {boolean} returns.liked - Always true after adding
+ * @returns {number} returns.likeCount - Total number of likes on the post
+ * @throws {Error} If authentication required (401), invalid post ID (400), or post not found (404)
+ */
+export async function addLike(postIdRaw, userId) {
+  if (!userId) {
+    const error = new Error('Authentication required');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const postId = normalizePostId(postIdRaw);
+  await assertPostExists(postId);
+
+  const existing = await findLikeByUser(postId, userId);
+  if (!existing) {
+    try {
+      await createLike(postId, userId);
+    } catch (err) {
+      if (!(err instanceof UniqueConstraintError)) {
+        throw err;
+      }
+      // Already liked by another concurrent request - that's fine
+    }
+  }
+
+  const likeCount = await countLikes(postId);
+  return { liked: true, likeCount };
+}
+
+/**
+ * Removes a like from a post by the authenticated user.
+ * @async
+ * @function removeLike
+ * @param {string|number} postIdRaw - Raw post ID value
+ * @param {number} userId - ID of the authenticated user
+ * @returns {Promise<Object>} Unlike result
+ * @returns {boolean} returns.liked - Always false after removing
+ * @returns {number} returns.likeCount - Total number of likes on the post
+ * @throws {Error} If authentication required (401), invalid post ID (400), or post not found (404)
+ */
+export async function removeLike(postIdRaw, userId) {
+  if (!userId) {
+    const error = new Error('Authentication required');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const postId = normalizePostId(postIdRaw);
+  await assertPostExists(postId);
+
+  const existing = await findLikeByUser(postId, userId);
+  if (existing) {
+    await deleteLike(existing);
+  }
+
+  const likeCount = await countLikes(postId);
+  return { liked: false, likeCount };
+}
+
+/**
  * Retrieves the like summary for a post.
  * @async
  * @function getLikeSummary

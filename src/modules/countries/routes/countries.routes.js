@@ -106,6 +106,8 @@ const privateRouter = express.Router();
  *                           flag:
  *                             type: string
  *                             format: uri
+ *                           is_popular:
+ *                             type: boolean
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -126,6 +128,7 @@ const privateRouter = express.Router();
  *                     name: "England"
  *                     code: "ENG"
  *                     flag: "https://flags.example/eng.png"
+ *                     is_popular: true
  *                 pagination:
  *                   totalItems: 171
  *                   totalPages: 9
@@ -228,6 +231,8 @@ publicRouter.get('/countries', CountriesController.list);
  *                           flag:
  *                             type: string
  *                             format: uri
+ *                           is_popular:
+ *                             type: boolean
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -250,6 +255,7 @@ publicRouter.get('/countries', CountriesController.list);
  *                     name: "Japan"
  *                     code: "JPN"
  *                     flag: "https://flags.example/jpn.png"
+ *                     is_popular: false
  *                 pagination:
  *                   totalItems: 2
  *                   totalPages: 1
@@ -297,6 +303,140 @@ publicRouter.get('/countries/search', CountriesController.search);
 
 /**
  * @openapi
+ * /api/countries/count:
+ *   get:
+ *     summary: Get countries count
+ *     description: Returns the total number of countries in the database.
+ *     tags:
+ *       - Countries
+ *     responses:
+ *       200:
+ *         description: Countries count retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *             example:
+ *               success: true
+ *               message: "Countries count retrieved"
+ *               data:
+ *                 total: 195
+ *       500:
+ *         description: Internal server error while counting countries.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   nullable: true
+ *             example:
+ *               success: false
+ *               message: "Error retrieving countries count"
+ *               data: null
+ */
+publicRouter.get('/countries/count', CountriesController.count);
+
+/**
+ * @openapi
+ * /api/countries/popular:
+ *   get:
+ *     summary: List popular countries
+ *     description: Returns all countries marked as popular (is_popular = true), sorted alphabetically by name. This endpoint is useful for displaying featured or commonly used countries.
+ *     tags:
+ *       - Countries
+ *     responses:
+ *       200:
+ *         description: Popular countries fetched successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           code:
+ *                             type: string
+ *                           flag:
+ *                             type: string
+ *                             format: uri
+ *                           is_popular:
+ *                             type: boolean
+ *                     total:
+ *                       type: integer
+ *             example:
+ *               success: true
+ *               message: "Popular countries retrieved"
+ *               data:
+ *                 data:
+ *                   - id: 1
+ *                     name: "England"
+ *                     code: "ENG"
+ *                     flag: "https://flags.example/eng.png"
+ *                     is_popular: true
+ *                   - id: 2
+ *                     name: "Germany"
+ *                     code: "GER"
+ *                     flag: "https://flags.example/ger.png"
+ *                     is_popular: true
+ *                   - id: 3
+ *                     name: "Spain"
+ *                     code: "ESP"
+ *                     flag: "https://flags.example/esp.png"
+ *                     is_popular: true
+ *                 total: 3
+ *       500:
+ *         description: Internal server error while fetching popular countries.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   nullable: true
+ *             example:
+ *               success: false
+ *               message: "Error retrieving popular countries"
+ *               data: null
+ */
+publicRouter.get('/countries/popular', CountriesController.popular);
+
+/**
+ * @openapi
  * /api/countries/{id}:
  *   get:
  *     summary: Country detail
@@ -335,6 +475,8 @@ publicRouter.get('/countries/search', CountriesController.search);
  *                     flag:
  *                       type: string
  *                       format: uri
+ *                     is_popular:
+ *                       type: boolean
  *             example:
  *               success: true
  *               message: "Country retrieved"
@@ -343,6 +485,7 @@ publicRouter.get('/countries/search', CountriesController.search);
  *                 name: "Japan"
  *                 code: "JPN"
  *                 flag: "https://flags.example/jpn.png"
+ *                 is_popular: false
  *       400:
  *         description: Invalid identifier supplied.
  *         content:
@@ -426,10 +569,14 @@ publicRouter.get('/countries/:id', CountriesController.detail);
  *               flag:
  *                 type: string
  *                 format: uri
+ *               is_popular:
+ *                 type: boolean
+ *                 default: false
  *           example:
  *             name: "Vietnam"
  *             code: "VNM"
  *             flag: "https://flags.example/vnm.png"
+ *             is_popular: false
  *     responses:
  *       201:
  *         description: Country created.
@@ -453,6 +600,8 @@ publicRouter.get('/countries/:id', CountriesController.detail);
  *                       type: string
  *                     flag:
  *                       type: string
+ *                     is_popular:
+ *                       type: boolean
  *             example:
  *               success: true
  *               message: "Country created successfully"
@@ -461,6 +610,7 @@ publicRouter.get('/countries/:id', CountriesController.detail);
  *                 name: "Vietnam"
  *                 code: "VNM"
  *                 flag: "https://flags.example/vnm.png"
+ *                 is_popular: false
  *       400:
  *         description: Validation error (missing name or invalid code).
  *         content:
@@ -567,10 +717,13 @@ privateRouter.post('/countries', auth, CountriesController.create);
  *               flag:
  *                 type: string
  *                 format: uri
+ *               is_popular:
+ *                 type: boolean
  *           example:
  *             name: "United Kingdom"
  *             code: "GBR"
  *             flag: "https://flags.example/gbr.png"
+ *             is_popular: true
  *     responses:
  *       200:
  *         description: Country updated.
@@ -594,6 +747,8 @@ privateRouter.post('/countries', auth, CountriesController.create);
  *                       type: string
  *                     flag:
  *                       type: string
+ *                     is_popular:
+ *                       type: boolean
  *             example:
  *               success: true
  *               message: "Country updated successfully"
@@ -602,6 +757,7 @@ privateRouter.post('/countries', auth, CountriesController.create);
  *                 name: "United Kingdom"
  *                 code: "GBR"
  *                 flag: "https://flags.example/gbr.png"
+ *                 is_popular: true
  *       400:
  *         description: Invalid identifier or payload.
  *         content:

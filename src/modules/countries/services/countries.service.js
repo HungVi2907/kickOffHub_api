@@ -26,7 +26,7 @@ import Country from '../models/country.model.js';
  * Giới hạn fields để bảo mật và tối ưu bandwidth.
  * @constant {string[]}
  */
-export const COUNTRY_ATTRIBUTES = ['id', 'name', 'code', 'flag'];
+export const COUNTRY_ATTRIBUTES = ['id', 'name', 'code', 'flag', 'is_popular'];
 
 /**
  * Giá trị mặc định cho trang (pagination)
@@ -42,9 +42,10 @@ const DEFAULT_LIMIT = 20;
 
 /**
  * Số lượng bản ghi tối đa cho phép mỗi trang (tránh quá tải server)
+ * Countries table is small, so allow fetching all at once
  * @constant {number}
  */
-const MAX_LIMIT = 100;
+const MAX_LIMIT = 300;
 
 /**
  * Custom Error class cho các lỗi validation input của Country.
@@ -150,21 +151,21 @@ export function parsePositiveIntOrDefault(value, defaultValue) {
  * console.log(result.pagination.totalItems); // Total count
  */
 export async function listCountries({ page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = {}) {
-  // Validate và parse tham số page
-  const pageNumber = parsePositiveIntOrDefault(page, DEFAULT_PAGE);
+  // Validate và parse tham số page - fallback to default if invalid
+  let pageNumber = parsePositiveIntOrDefault(page, DEFAULT_PAGE);
   if (pageNumber === null) {
-    throw createInputError('INVALID_PAGE', 'Page value must be a positive integer');
+    pageNumber = DEFAULT_PAGE; // Fallback instead of throwing error
   }
 
-  // Validate và parse tham số limit
-  const limitNumber = parsePositiveIntOrDefault(limit, DEFAULT_LIMIT);
+  // Validate và parse tham số limit - fallback to default if invalid
+  let limitNumber = parsePositiveIntOrDefault(limit, DEFAULT_LIMIT);
   if (limitNumber === null) {
-    throw createInputError('INVALID_LIMIT', 'Limit value must be a positive integer');
+    limitNumber = DEFAULT_LIMIT; // Fallback instead of throwing error
   }
   
-  // Kiểm tra limit không vượt quá giới hạn cho phép
+  // Cap limit to MAX_LIMIT instead of throwing error
   if (limitNumber > MAX_LIMIT) {
-    throw createInputError('LIMIT_TOO_LARGE', `Limit cannot exceed ${MAX_LIMIT}`);
+    limitNumber = MAX_LIMIT;
   }
 
   // Tính offset cho query (vị trí bắt đầu lấy dữ liệu)
@@ -328,15 +329,33 @@ export async function getCountryById(id) {
  * });
  */
 export async function createCountry(payload = {}) {
-  const { name, code, flag } = payload;
+  const { name, code, flag, is_popular } = payload;
   
   // Validate name là bắt buộc
   if (!name) {
     throw createInputError('NAME_REQUIRED', 'Name is required');
   }
+
+  // Validate name length
+  if (name.length > 255) {
+    throw createInputError('NAME_TOO_LONG', 'Name cannot exceed 255 characters');
+  }
+
+  // Validate code length if provided
+  if (code && code.length > 10) {
+    throw createInputError('CODE_TOO_LONG', 'Code cannot exceed 10 characters');
+  }
+
+  // Validate flag URL if provided
+  if (flag && flag.length > 255) {
+    throw createInputError('FLAG_TOO_LONG', 'Flag URL cannot exceed 255 characters');
+  }
+
+  // Validate is_popular is boolean if provided
+  const isPopularValue = is_popular === true || is_popular === 1 || is_popular === '1' || is_popular === 'true';
   
   // Tạo mới quốc gia trong database
-  const country = await Country.create({ name, code, flag });
+  const country = await Country.create({ name, code, flag, is_popular: isPopularValue });
   return country;
 }
 
@@ -365,16 +384,39 @@ export async function updateCountry(id, payload = {}) {
     throw createInputError('INVALID_ID', 'Country Id is not valid');
   }
 
-  const { name, code, flag } = payload;
+  const { name, code, flag, is_popular } = payload;
   
   // Validate name là bắt buộc
   if (!name) {
     throw createInputError('NAME_REQUIRED', 'Name is required');
   }
 
+  // Validate name length
+  if (name.length > 255) {
+    throw createInputError('NAME_TOO_LONG', 'Name cannot exceed 255 characters');
+  }
+
+  // Validate code length if provided
+  if (code && code.length > 10) {
+    throw createInputError('CODE_TOO_LONG', 'Code cannot exceed 10 characters');
+  }
+
+  // Validate flag URL if provided
+  if (flag && flag.length > 255) {
+    throw createInputError('FLAG_TOO_LONG', 'Flag URL cannot exceed 255 characters');
+  }
+
+  // Build update data
+  const updateData = { name, code, flag };
+  
+  // Only update is_popular if explicitly provided
+  if (is_popular !== undefined) {
+    updateData.is_popular = is_popular === true || is_popular === 1 || is_popular === '1' || is_popular === 'true';
+  }
+
   // Thực hiện update và kiểm tra số bản ghi bị ảnh hưởng
   const [updated] = await Country.update(
-    { name, code, flag },
+    updateData,
     { where: { id: countryId } },
   );
   
@@ -385,6 +427,51 @@ export async function updateCountry(id, payload = {}) {
   
   // Trả về quốc gia sau khi update
   return Country.findByPk(countryId, { attributes: COUNTRY_ATTRIBUTES });
+}
+
+/**
+ * Lấy danh sách các quốc gia nổi bật (is_popular = true).
+ * Danh sách được sắp xếp theo tên quốc gia theo thứ tự A-Z.
+ * 
+ * @async
+ * @function listPopularCountries
+ * @returns {Promise<Object>} Kết quả với danh sách quốc gia nổi bật
+ * @returns {Array<Object>} returns.data - Mảng các quốc gia nổi bật
+ * @returns {number} returns.total - Tổng số quốc gia nổi bật
+ * 
+ * @example
+ * const result = await listPopularCountries();
+ * console.log(result.data); // Array of popular countries
+ * console.log(result.total); // Total count
+ */
+export async function listPopularCountries() {
+  const { rows, count } = await Country.findAndCountAll({
+    attributes: COUNTRY_ATTRIBUTES,
+    where: { is_popular: true },
+    order: [['name', 'ASC']],
+  });
+
+  return {
+    data: rows,
+    total: count,
+  };
+}
+
+/**
+ * Get the total count of countries in the database.
+ * 
+ * @async
+ * @function getCountriesCount
+ * @returns {Promise<Object>} Object containing total count
+ * @returns {number} returns.total - Total number of countries
+ * 
+ * @example
+ * const result = await getCountriesCount();
+ * console.log(result.total); // 195
+ */
+export async function getCountriesCount() {
+  const total = await Country.count();
+  return { total };
 }
 
 /**

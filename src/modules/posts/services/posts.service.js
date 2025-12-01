@@ -165,8 +165,8 @@ async function invalidateCache() {
  * Lấy danh sách bài viết có phân trang
  * 
  * Luồng xử lý:
- * 1. Validate và normalize params (page, limit)
- * 2. Kiểm tra cache Redis
+ * 1. Validate và normalize params (page, limit, sort, filters)
+ * 2. Kiểm tra cache Redis (only for queries without filters)
  * 3. Nếu cache miss, query database và lưu cache
  * 4. Trả về response đã format
  * 
@@ -174,6 +174,11 @@ async function invalidateCache() {
  * @function listPosts
  * @param {string|number} pageRaw - Số trang (raw input từ query)
  * @param {string|number} limitRaw - Số bài viết mỗi trang (raw input)
+ * @param {string} [sort] - Cách sắp xếp: 'likes' | 'newest' (default)
+ * @param {Object} [filters] - Các filter tùy chọn
+ * @param {string} [filters.search] - Từ khóa tìm kiếm
+ * @param {string} [filters.tag] - Tên tag để filter
+ * @param {string} [filters.status] - Trạng thái: 'public' | 'draft'
  * @returns {Promise<Object>} Paginated response
  * @returns {number} returns.total - Tổng số bài viết
  * @returns {number} returns.page - Trang hiện tại
@@ -183,8 +188,14 @@ async function invalidateCache() {
  * @example
  * const result = await listPosts('1', '10');
  * // { total: 100, page: 1, pageSize: 10, data: [...] }
+ * 
+ * const sortedByLikes = await listPosts('1', '10', 'likes');
+ * // Posts sorted by like count descending
+ * 
+ * const filtered = await listPosts('1', '10', 'newest', { search: 'tactics', tag: 'premier' });
+ * // Filtered posts
  */
-export async function listPosts(pageRaw, limitRaw) {
+export async function listPosts(pageRaw, limitRaw, sort, filters = {}) {
   // Parse và validate page
   let page = Number.parseInt(pageRaw, 10);
   let limit = Number.parseInt(limitRaw, 10);
@@ -201,7 +212,21 @@ export async function listPosts(pageRaw, limitRaw) {
   // Giới hạn limit để tránh query quá lớn
   limit = Math.min(limit, MAX_LIMIT);
 
-  const cacheKey = buildCacheKey(page, limit);
+  // Normalize sort parameter
+  const sortOption = sort === 'likes' ? 'likes' : 'newest';
+
+  // Extract and normalize filter parameters
+  const search = filters.search?.trim() || '';
+  const tag = filters.tag?.trim() || '';
+  const status = filters.status?.trim() || '';
+
+  // Check if any filters are active (for cache decision)
+  const hasFilters = search || tag || status;
+
+  // Build cache key including sort option and filters
+  const cacheKey = hasFilters
+    ? `${buildCacheKey(page, limit)}:${sortOption}:${search}:${tag}:${status}`
+    : `${buildCacheKey(page, limit)}:${sortOption}`;
 
   // Try cache first nếu Redis available
   if (redisClient.isOpen) {
@@ -211,8 +236,15 @@ export async function listPosts(pageRaw, limitRaw) {
     }
   }
 
-  // Cache miss - Query database
-  const collection = await findPaginatedPosts({ page, limit });
+  // Cache miss - Query database with sort option and filters
+  const collection = await findPaginatedPosts({
+    page,
+    limit,
+    sort: sortOption,
+    search,
+    tag,
+    status
+  });
   const response = await mapPostCollectionToResponse(collection);
   
   // Build final payload
@@ -224,9 +256,11 @@ export async function listPosts(pageRaw, limitRaw) {
   };
 
   // Cache result nếu Redis available và TTL > 0
+  // Use shorter TTL for filtered results
   if (redisClient.isOpen && CACHE_TTL_SECONDS > 0) {
+    const ttl = hasFilters ? Math.min(CACHE_TTL_SECONDS, 30) : CACHE_TTL_SECONDS;
     await redisClient.set(cacheKey, JSON.stringify(payload), {
-      EX: CACHE_TTL_SECONDS,
+      EX: ttl,
     });
   }
 
